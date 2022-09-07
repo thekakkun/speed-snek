@@ -1,0 +1,18 @@
+{
+  "name": "speed-snek",
+  "version": "1.0.0",
+  "description": "A game of Snake, on speed!",
+  "source": "src/index.html",
+  "browserlist": "> 0.5%, last 2 versions, not dead",
+  "scripts": {
+    "start": "parcel",
+    "build": "parcel build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@parcel/transformer-sass": "^2.7.0",
+    "parcel": "^2.7.0"
+  }
+}
