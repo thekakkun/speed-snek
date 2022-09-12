@@ -9,6 +9,34 @@ function dist(p1: Point, p2: Point): number {
   return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 }
 
+function intersection(
+  p1: Point,
+  p2: Point,
+  center: Point,
+  radius: number
+): Point {
+  const { x: x1, y: y1 } = p1;
+  const { x: x2, y: y2 } = p2;
+  const { x: xc, y: yc } = center;
+
+  const a = (x1 - x2) ** 2 + (y1 - y2) ** 2;
+  const b = 2 * (x1 - x2) * (x2 - xc) + 2 * (y1 - y2) * (y2 - yc);
+  const c = (x2 - xc) ** 2 + (y2 - yc) ** 2 - radius ** 2;
+
+  let t: number;
+  t = (-b - Math.sqrt(b ** 2 - 4 * a * c)) / (2 * a);
+
+  if (t < 0 || 1 < t) {
+    console.log("redo!");
+    t = (-b + Math.sqrt(b ** 2 - 4 * a * c)) / (2 * a);
+  }
+
+  return {
+    x: t * x1 + (1 - t) * x2,
+    y: t * y1 + (1 - t) * y2,
+  };
+}
+
 class SpeedSnek {
   board: Board;
 
@@ -36,8 +64,8 @@ class SpeedSnek {
 
   draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    this.board.snek.draw();
     this.board.snek.drawSnek();
+    this.board.snek.draw();
 
     myReq = requestAnimationFrame(() => this.draw());
   }
@@ -79,10 +107,10 @@ class Snek extends Cursor {
   segLength: number;
   snekPath: Path;
 
-  constructor(segments = 3, segLength = 20) {
+  constructor(segments = 3, segLength = 40) {
     let initPath: Path = [];
 
-    for (let i = 0; i <= segments; i++) {
+    for (let i = 0; i < segments + 1; i++) {
       initPath.push({
         x: canvas.width / 2,
         y: canvas.height / 2 + i * segLength,
@@ -95,11 +123,22 @@ class Snek extends Cursor {
     this.snekPath = initPath.slice();
   }
 
-  update() {}
+  update() {
+    this.snekPath = [this.path[0]];
+    let segHead = this.snekPath[this.snekPath.length - 1];
+    for (let [ix, e] of this.path.entries()) {
+      if (this.segLength <= dist(segHead, e)) {
+        segHead = intersection(this.path[ix - 1], e, segHead, this.segLength);
+
+        if (this.snekPath.push(segHead) === this.segments + 1) {
+          break;
+        }
+      }
+    }
+  }
 
   drawSnek() {
-    console.log(this.snekPath);
-    // this.update();
+    this.update();
 
     ctx.strokeStyle = "green";
     ctx.lineWidth = 3;
