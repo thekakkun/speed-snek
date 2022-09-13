@@ -1,9 +1,8 @@
+type Path = Point[];
 interface Point {
   x: number;
   y: number;
 }
-
-type Path = Point[];
 
 function dist(p1: Point, p2: Point): number {
   return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
@@ -42,7 +41,7 @@ class SpeedSnek {
   constructor(board: Board) {
     this.board = board;
 
-    canvas.addEventListener(
+    document.addEventListener(
       "pointermove",
       (e) => this.pointerMoveHandler(e),
       false
@@ -88,14 +87,24 @@ class Board {
   }
 
   checkCollisions() {
-    // snek vs pellet collisions
     const snekHead = this.snek.snekPath[0];
+
+    // snek vs pellet collisions
     if (dist(snekHead, this.pellet.loc) <= this.pellet.r) {
       this.snek.segments += 1;
       this.pellet = this.createPellet();
     }
 
     // snek vs wall collisions
+    if (
+      snekHead.x - 1 <= 0 ||
+      canvas.width - 1 <= snekHead.x ||
+      snekHead.y - 1 <= 0 ||
+      canvas.height - 1 <= snekHead.y
+    ) {
+      console.log("whoops!");
+    }
+
     // snek vs snek collisions
   }
 
@@ -215,4 +224,3 @@ let myReq: number;
 const snek = new Snek();
 const board = new Board(snek);
 const speedSnek = new SpeedSnek(board);
-// speedSnek.init();
