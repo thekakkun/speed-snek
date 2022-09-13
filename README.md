@@ -1,10 +1,12 @@
 # Speed Snek
 
-A game of Snake, _on speed_!
+The game of Snake, _on speed_!
+
+This game is still in development. [Read more about the implementation here](https://thekakkun.github.io/blog?tag=speed+snek).
 
 ## What is it?
 
-A mash-up of the classic computer game [Snake](<https://en.wikipedia.org/wiki/Snake_(video_game_genre)>) and the 1994 movie [Speed](<https://en.wikipedia.org/wiki/Speed_(1994_film)>) starring Keanu Reeves and Sandra Bullock. Control the snake with you finger to eat pellets. Game over if you go under the speed limit, or if you crash into yourself or the walls.
+A mash-up of the classic [computer game Snake](<https://en.wikipedia.org/wiki/Snake_(video_game_genre)>) and the [1994 movie Speed](<https://en.wikipedia.org/wiki/Speed_(1994_film)>) starring Keanu Reeves and Sandra Bullock. Control the snake with your finger to eat pellets. Game over if you go under the speed limit, or if you crash into yourself or the walls.
 
 This project was used to teach myself about:
 
