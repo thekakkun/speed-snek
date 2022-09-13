@@ -2,7 +2,7 @@
 
 The game of Snake, _on speed_!
 
-This game is still in development. [Read more about the implementation here](https://thekakkun.github.io/blog?tag=speed+snek).
+This game is still in development. [Read more about its goings-on here](https://thekakkun.github.io/blog?tag=speed+snek).
 
 ## What is it?
 
