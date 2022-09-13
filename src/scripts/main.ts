@@ -26,7 +26,7 @@ function intersection(
   let t: number;
   t = (-b - Math.sqrt(b ** 2 - 4 * a * c)) / (2 * a);
 
-  if (t < 0 || 1 < t) {
+  if (!(0 <= t && t <= 1)) {
     t = (-b + Math.sqrt(b ** 2 - 4 * a * c)) / (2 * a);
   }
 
@@ -41,9 +41,7 @@ class SpeedSnek {
 
   constructor(board: Board) {
     this.board = board;
-  }
 
-  init() {
     canvas.addEventListener(
       "pointermove",
       (e) => this.pointerMoveHandler(e),
@@ -63,7 +61,7 @@ class SpeedSnek {
 
   draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    this.board.snek.draw();
+    this.board.draw();
 
     myReq = requestAnimationFrame(() => this.draw());
   }
@@ -71,9 +69,46 @@ class SpeedSnek {
 
 class Board {
   snek: Snek;
+  pellet: Pellet;
 
   constructor(snek: Snek) {
     this.snek = snek;
+    this.pellet = this.createPellet();
+  }
+
+  update() {
+    snek.update();
+    this.checkCollisions();
+  }
+
+  draw() {
+    this.update();
+    this.snek.draw();
+    this.pellet.draw();
+  }
+
+  checkCollisions() {
+    // snek vs pellet collisions
+    const snekHead = this.snek.snekPath[0];
+    if (dist(snekHead, this.pellet.loc) <= this.pellet.r) {
+      this.snek.segments += 1;
+      this.pellet = this.createPellet();
+    }
+
+    // snek vs wall collisions
+    // snek vs snek collisions
+  }
+
+  createPellet() {
+    const buffer = 50;
+    const loc = {
+      x: Math.random() * (canvas.width - buffer) + buffer,
+      y: Math.random() * (canvas.height - buffer) + buffer,
+    };
+    const pellet = new Pellet(loc);
+    pellet.draw();
+
+    return pellet;
   }
 }
 
@@ -142,7 +177,6 @@ class Snek extends Cursor {
 
   draw() {
     super.draw();
-    this.update();
 
     ctx.strokeStyle = "green";
     ctx.lineWidth = 3;
@@ -159,11 +193,19 @@ class Snek extends Cursor {
 
 class Pellet {
   loc: Point;
-  constructor(loc: Point) {
+  r: number;
+
+  constructor(loc: Point, r = 8) {
     this.loc = loc;
+    this.r = r;
   }
 
-  draw() {}
+  draw() {
+    ctx.fillStyle = "blue";
+    ctx.beginPath();
+    ctx.arc(this.loc.x, this.loc.y, this.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
@@ -173,4 +215,4 @@ let myReq: number;
 const snek = new Snek();
 const board = new Board(snek);
 const speedSnek = new SpeedSnek(board);
-speedSnek.init();
+// speedSnek.init();
