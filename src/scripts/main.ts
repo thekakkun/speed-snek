@@ -26,11 +26,16 @@ function intersection(seg1: Path, seg2: Arc | Path): Point | false {
     const b = (x1 - x2) * (x2 - xc) + (y1 - y2) * (y2 - yc);
     const c = (x2 - xc) ** 2 + (y2 - yc) ** 2 - radius ** 2;
 
+    const discriminant = b ** 2 - a * c;
+    if (discriminant < 0) {
+      return false;
+    }
+
     let t: number;
-    t = (-b - Math.sqrt(b ** 2 - a * c)) / a;
+    t = (-b - Math.sqrt(discriminant)) / a;
 
     if (!(0 <= t && t <= 1)) {
-      t = (-b + Math.sqrt(b ** 2 - a * c)) / a;
+      t = (-b + Math.sqrt(discriminant)) / a;
     }
 
     return {
@@ -122,6 +127,8 @@ class Board {
     const snekHead = this.snek.snekPath[0];
 
     // snek vs pellet collisions
+    // TODO: Check collision between line and arc, not line and snekHead.
+    //       Can pass through if too fast.
     if (
       dist(snekHead, this.pellet.loc) <=
       this.pellet.r + this.snek.snekWidth / 2
@@ -187,6 +194,17 @@ class Cursor {
   add(point: Point) {
     this.path.unshift(point);
   }
+
+  getSpeed(window = 3) {
+    // TODO: How is this influenced by screen resolution & scaling?
+    window = Math.min(window, this.path.length - 1);
+    let travelled = 0;
+    for (let i = 0; i < window; i++) {
+      travelled += dist(this.path[i], this.path[i + 1]);
+    }
+
+    return travelled / window;
+  }
 }
 
 class Snek extends Cursor {
@@ -195,7 +213,7 @@ class Snek extends Cursor {
   snekPath: Path;
   snekWidth: number;
 
-  constructor(segments = 50, segLength = 30, snekWidth = 5) {
+  constructor(segments = 4, segLength = 50, snekWidth = 10) {
     let initPath: Path = [];
 
     for (let i = 0; i < segments + 1; i++) {
@@ -231,7 +249,7 @@ class Snek extends Cursor {
           }
         }
       } else {
-        if (this.segLength * 1.5 <= dist(segHead, p)) {
+        if (this.segLength * 2 <= dist(segHead, p)) {
           this.path.splice(ix);
           break;
         }
@@ -243,8 +261,9 @@ class Snek extends Cursor {
     super.draw();
 
     ctx.strokeStyle = "green";
-    ctx.lineWidth = this.snekWidth;
     ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = this.snekWidth;
 
     ctx.beginPath();
     ctx.moveTo(this.snekPath[0].x, this.snekPath[0].y);
