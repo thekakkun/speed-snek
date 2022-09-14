@@ -23,14 +23,14 @@ function intersection(seg1: Path, seg2: Arc | Path): Point | false {
     } = seg2;
 
     const a = (x1 - x2) ** 2 + (y1 - y2) ** 2;
-    const b = 2 * (x1 - x2) * (x2 - xc) + 2 * (y1 - y2) * (y2 - yc);
+    const b = (x1 - x2) * (x2 - xc) + (y1 - y2) * (y2 - yc);
     const c = (x2 - xc) ** 2 + (y2 - yc) ** 2 - radius ** 2;
 
     let t: number;
-    t = (-b + Math.sqrt(b ** 2 - 4 * a * c)) / (2 * a);
+    t = (-b - Math.sqrt(b ** 2 - a * c)) / a;
 
     if (!(0 <= t && t <= 1)) {
-      t = (-b - Math.sqrt(b ** 2 - 4 * a * c)) / (2 * a);
+      t = (-b + Math.sqrt(b ** 2 - a * c)) / a;
     }
 
     return {
@@ -120,7 +120,6 @@ class Board {
 
   checkCollisions() {
     const snekHead = this.snek.snekPath[0];
-    console.log(this.snek.snekPath.length);
 
     // snek vs pellet collisions
     if (
@@ -196,7 +195,7 @@ class Snek extends Cursor {
   snekPath: Path;
   snekWidth: number;
 
-  constructor(segments = 10, segLength = 30, snekWidth = 5) {
+  constructor(segments = 50, segLength = 30, snekWidth = 5) {
     let initPath: Path = [];
 
     for (let i = 0; i < segments + 1; i++) {
@@ -218,7 +217,7 @@ class Snek extends Cursor {
     let segHead = this.snekPath[this.snekPath.length - 1];
     for (let [ix, p] of this.path.entries()) {
       if (this.snekPath.length <= this.segments) {
-        if (this.segLength <= dist(segHead, p)) {
+        while (this.segLength < dist(segHead, p)) {
           const seg = [this.path[ix - 1], p];
           const arc = {
             center: segHead,
@@ -226,9 +225,13 @@ class Snek extends Cursor {
           };
           segHead = intersection(seg, arc);
           this.snekPath.push(segHead);
+
+          if (this.segments < this.snekPath.length) {
+            break;
+          }
         }
       } else {
-        if (this.segLength * 1.1 <= dist(segHead, p)) {
+        if (this.segLength * 1.5 <= dist(segHead, p)) {
           this.path.splice(ix);
           break;
         }
