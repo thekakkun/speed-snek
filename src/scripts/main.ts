@@ -1,51 +1,79 @@
-type Path = Point[];
 interface Point {
   x: number;
   y: number;
 }
+interface Arc {
+  center: Point;
+  radius: number;
+}
+type Path = Point[];
 
 function dist(p1: Point, p2: Point): number {
   return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 }
 
-function intersection(
-  p1: Point,
-  p2: Point,
-  center: Point,
-  radius: number
-): Point {
-  const { x: x1, y: y1 } = p1;
-  const { x: x2, y: y2 } = p2;
-  const { x: xc, y: yc } = center;
+function intersection(seg1: Path, arc: Arc): Point;
+function intersection(seg1: Path, seg2: Path): Point | false;
+function intersection(seg1: Path, seg2: Arc | Path): Point | false {
+  if ("center" in seg2) {
+    const [{ x: x1, y: y1 }, { x: x2, y: y2 }] = seg1;
+    const {
+      center: { x: xc, y: yc },
+      radius,
+    } = seg2;
 
-  const a = (x1 - x2) ** 2 + (y1 - y2) ** 2;
-  const b = 2 * (x1 - x2) * (x2 - xc) + 2 * (y1 - y2) * (y2 - yc);
-  const c = (x2 - xc) ** 2 + (y2 - yc) ** 2 - radius ** 2;
+    const a = (x1 - x2) ** 2 + (y1 - y2) ** 2;
+    const b = 2 * (x1 - x2) * (x2 - xc) + 2 * (y1 - y2) * (y2 - yc);
+    const c = (x2 - xc) ** 2 + (y2 - yc) ** 2 - radius ** 2;
 
-  let t: number;
-  t = (-b - Math.sqrt(b ** 2 - 4 * a * c)) / (2 * a);
-
-  if (!(0 <= t && t <= 1)) {
+    let t: number;
     t = (-b + Math.sqrt(b ** 2 - 4 * a * c)) / (2 * a);
-  }
 
-  return {
-    x: t * x1 + (1 - t) * x2,
-    y: t * y1 + (1 - t) * y2,
-  };
+    if (!(0 <= t && t <= 1)) {
+      t = (-b - Math.sqrt(b ** 2 - 4 * a * c)) / (2 * a);
+    }
+
+    return {
+      x: t * x1 + (1 - t) * x2,
+      y: t * y1 + (1 - t) * y2,
+    };
+  } else {
+    const [{ x: x1, y: y1 }, { x: x2, y: y2 }] = seg1;
+    const [{ x: x3, y: y3 }, { x: x4, y: y4 }] = seg2;
+
+    const t =
+      ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) /
+      ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
+    if (!(0 <= t && t <= 1)) {
+      return false;
+    }
+
+    const u =
+      ((x1 - x3) * (y1 - y2) - (y1 - y3) * (x1 - x2)) /
+      ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
+    if (!(0 <= u && u <= 1)) {
+      return false;
+    }
+
+    return {
+      x: x1 + t * (x2 - x1),
+      y: y1 + t * (y2 - y1),
+    };
+  }
 }
 
 class SpeedSnek {
   board: Board;
 
-  constructor(board: Board) {
-    this.board = board;
+  constructor() {
+    this.board = new Board();
 
     document.addEventListener(
       "pointermove",
       (e) => this.pointerMoveHandler(e),
       false
     );
+
     this.draw();
   }
 
@@ -56,6 +84,11 @@ class SpeedSnek {
     };
 
     this.board.snek.add(coord);
+    this.update();
+  }
+
+  update() {
+    this.board.update();
   }
 
   draw() {
@@ -70,27 +103,30 @@ class Board {
   snek: Snek;
   pellet: Pellet;
 
-  constructor(snek: Snek) {
-    this.snek = snek;
+  constructor() {
+    this.snek = new Snek();
     this.pellet = this.createPellet();
   }
 
   update() {
-    snek.update();
+    this.snek.update();
     this.checkCollisions();
   }
 
   draw() {
-    this.update();
     this.snek.draw();
     this.pellet.draw();
   }
 
   checkCollisions() {
     const snekHead = this.snek.snekPath[0];
+    console.log(this.snek.snekPath.length);
 
     // snek vs pellet collisions
-    if (dist(snekHead, this.pellet.loc) <= this.pellet.r) {
+    if (
+      dist(snekHead, this.pellet.loc) <=
+      this.pellet.r + this.snek.snekWidth / 2
+    ) {
       this.snek.segments += 1;
       this.pellet = this.createPellet();
     }
@@ -106,13 +142,23 @@ class Board {
     }
 
     // snek vs snek collisions
+    for (let i = 2; i < this.snek.snekPath.length - 1; i++) {
+      if (
+        intersection(
+          [this.snek.snekPath[0], this.snek.snekPath[1]],
+          [this.snek.snekPath[i], this.snek.snekPath[i + 1]]
+        )
+      ) {
+        console.log("ouch!");
+      }
+    }
   }
 
   createPellet() {
-    const buffer = 50;
+    const buffer = 30;
     const loc = {
-      x: Math.random() * (canvas.width - buffer) + buffer,
-      y: Math.random() * (canvas.height - buffer) + buffer,
+      x: Math.random() * (canvas.width - buffer * 2) + buffer,
+      y: Math.random() * (canvas.height - buffer * 2) + buffer,
     };
     const pellet = new Pellet(loc);
     pellet.draw();
@@ -148,8 +194,9 @@ class Snek extends Cursor {
   segments: number;
   segLength: number;
   snekPath: Path;
+  snekWidth: number;
 
-  constructor(segments = 3, segLength = 30) {
+  constructor(segments = 10, segLength = 30, snekWidth = 5) {
     let initPath: Path = [];
 
     for (let i = 0; i < segments + 1; i++) {
@@ -163,21 +210,26 @@ class Snek extends Cursor {
     this.segments = segments;
     this.segLength = segLength;
     this.snekPath = initPath.slice();
+    this.snekWidth = snekWidth;
   }
 
   update() {
     this.snekPath = [this.path[0]];
     let segHead = this.snekPath[this.snekPath.length - 1];
-    for (let [ix, p2] of this.path.entries()) {
+    for (let [ix, p] of this.path.entries()) {
       if (this.snekPath.length <= this.segments) {
-        if (this.segLength <= dist(segHead, p2)) {
-          const p1 = this.path[ix - 1];
-          segHead = intersection(p1, p2, segHead, this.segLength);
+        if (this.segLength <= dist(segHead, p)) {
+          const seg = [this.path[ix - 1], p];
+          const arc = {
+            center: segHead,
+            radius: this.segLength,
+          };
+          segHead = intersection(seg, arc);
           this.snekPath.push(segHead);
         }
       } else {
-        if (this.segLength * 3 <= dist(segHead, p2)) {
-          this.path = this.path.slice(0, ix);
+        if (this.segLength * 1.1 <= dist(segHead, p)) {
+          this.path.splice(ix);
           break;
         }
       }
@@ -188,7 +240,7 @@ class Snek extends Cursor {
     super.draw();
 
     ctx.strokeStyle = "green";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = this.snekWidth;
     ctx.lineCap = "round";
 
     ctx.beginPath();
@@ -221,6 +273,4 @@ const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
 let myReq: number;
 
-const snek = new Snek();
-const board = new Board(snek);
-const speedSnek = new SpeedSnek(board);
+const speedSnek = new SpeedSnek();
