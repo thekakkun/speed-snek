@@ -74,20 +74,43 @@ function intersection(seg1: Path, seg2: Arc | Path): Point | false {
 
 class SpeedSnek {
   ui: UI;
-  board: Board;
+  snek: Snek;
+  pellet: Pellet;
 
-  constructor() {
+  score: number;
+  speed: number;
+  speedLim: number;
+
+  constructor(score = 0, speedLim = 100) {
     this.ui = new UI();
-    this.board = new Board();
-    this.draw = this.draw.bind(this);
+    this.snek = new Snek();
+    this.pellet = new Pellet(undefined, undefined, this.snek.snekPath);
 
-    document.addEventListener(
-      "pointermove",
-      (e) => this.pointerMoveHandler(e),
-      false
-    );
+    this.score = score;
+    this.speed = this.snek.getSpeed();
+    this.speedLim = speedLim;
+
+    this.draw = this.draw.bind(this);
+    this.pointerMoveHandler = this.pointerMoveHandler.bind(this);
+
+    document.addEventListener("pointermove", this.pointerMoveHandler);
 
     this.draw();
+  }
+
+  update() {
+    this.snek.update();
+    this.speed = this.snek.getSpeed();
+    this.checkCollisions();
+  }
+
+  draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    this.snek.draw();
+    this.pellet.draw();
+    this.ui.draw(this.score, this.speed, this.speedLim);
+
+    myReq = requestAnimationFrame(this.draw);
   }
 
   pointerMoveHandler(e: PointerEvent) {
@@ -96,44 +119,8 @@ class SpeedSnek {
       y: e.y - canvas.offsetTop,
     };
 
-    this.board.snek.add(coord);
+    this.snek.add(coord);
     this.update();
-  }
-
-  update() {
-    this.board.update();
-  }
-
-  draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    this.board.draw();
-    this.ui.draw();
-
-    myReq = requestAnimationFrame(this.draw);
-  }
-}
-
-class UI {
-  draw() {}
-}
-
-class Board {
-  snek: Snek;
-  pellet: Pellet;
-
-  constructor() {
-    this.snek = new Snek();
-    this.pellet = new Pellet(undefined, undefined, this.snek.snekPath);
-  }
-
-  update() {
-    this.snek.update();
-    this.checkCollisions();
-  }
-
-  draw() {
-    this.snek.draw();
-    this.pellet.draw();
   }
 
   checkCollisions() {
@@ -146,6 +133,8 @@ class Board {
       dist(snekHead, this.pellet.loc) <=
       this.pellet.r + this.snek.snekWidth / 2
     ) {
+      console.log("nom!");
+      this.score += 1;
       this.snek.segments += 1;
       this.pellet = new Pellet(undefined, undefined, this.snek.snekPath);
     }
@@ -172,6 +161,17 @@ class Board {
       }
     }
   }
+}
+
+class UI {
+  draw(score: number, speed: number, speedLim: number) {
+    this.drawScore(score);
+    this.drawSpeed(speed, speedLim);
+  }
+
+  drawSpeed(speed: number, speedLim: number) {}
+
+  drawScore(score: number) {}
 }
 
 class Cursor {
@@ -288,6 +288,13 @@ class Pellet {
     this.loc = this.place();
   }
 
+  draw() {
+    ctx.fillStyle = "blue";
+    ctx.beginPath();
+    ctx.arc(this.loc.x, this.loc.y, this.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   place() {
     let loc: Point;
     let locValid: boolean;
@@ -315,20 +322,70 @@ class Pellet {
           break;
         }
       }
-      
+
       if (locValid) {
         return loc;
       }
     }
   }
-
-  draw() {
-    ctx.fillStyle = "blue";
-    ctx.beginPath();
-    ctx.arc(this.loc.x, this.loc.y, this.r, 0, Math.PI * 2);
-    ctx.fill();
-  }
 }
+
+// class Board {
+//   snek: Snek;
+//   pellet: Pellet;
+
+//   constructor() {
+//     this.snek = new Snek();
+//     this.pellet = new Pellet(undefined, undefined, this.snek.snekPath);
+//   }
+
+//   update() {
+//     this.snek.update();
+//     this.checkCollisions();
+//   }
+
+//   draw() {
+//     this.snek.draw();
+//     this.pellet.draw();
+//   }
+
+//   checkCollisions() {
+//     const snekHead = this.snek.snekPath[0];
+
+//     // snek vs pellet collisions
+//     // TODO: Check collision between line and arc, not line and snekHead.
+//     //       Can pass through if too fast.
+//     if (
+//       dist(snekHead, this.pellet.loc) <=
+//       this.pellet.r + this.snek.snekWidth / 2
+//     ) {
+//       this.snek.segments += 1;
+//       this.pellet = new Pellet(undefined, undefined, this.snek.snekPath);
+//     }
+
+//     // snek vs wall collisions
+//     if (
+//       snekHead.x - 1 <= 0 ||
+//       canvas.width - 1 <= snekHead.x ||
+//       snekHead.y - 1 <= 0 ||
+//       canvas.height - 1 <= snekHead.y
+//     ) {
+//       console.log("whoops!");
+//     }
+
+//     // snek vs snek collisions
+//     for (let i = 2; i < this.snek.snekPath.length - 1; i++) {
+//       if (
+//         intersection(
+//           [this.snek.snekPath[0], this.snek.snekPath[1]],
+//           [this.snek.snekPath[i], this.snek.snekPath[i + 1]]
+//         )
+//       ) {
+//         console.log("ouch!");
+//       }
+//     }
+//   }
+// }
 
 let myReq: number;
 
