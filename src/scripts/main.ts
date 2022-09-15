@@ -12,7 +12,7 @@ function dist(p1: Point, p2: Point): number {
   return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 }
 
-function intersection(seg1: Path, arc: Arc): Point;
+function intersection(seg1: Path, arc: Arc): Point | false;
 function intersection(seg1: Path, seg2: Path): Point | false;
 function intersection(seg1: Path, seg2: Arc | Path): Point | false {
   if ("center" in seg2) {
@@ -35,7 +35,12 @@ function intersection(seg1: Path, seg2: Arc | Path): Point | false {
     t = (-b - Math.sqrt(discriminant)) / a;
 
     if (!(0 <= t && t <= 1)) {
+      // getting the other intersection
       t = (-b + Math.sqrt(discriminant)) / a;
+    }
+    if (!(0 <= t && t <= 1)) {
+      // t still out of range? then no intersection.
+      return false;
     }
 
     return {
@@ -68,10 +73,13 @@ function intersection(seg1: Path, seg2: Arc | Path): Point | false {
 }
 
 class SpeedSnek {
+  ui: UI;
   board: Board;
 
   constructor() {
+    this.ui = new UI();
     this.board = new Board();
+    this.draw = this.draw.bind(this);
 
     document.addEventListener(
       "pointermove",
@@ -99,9 +107,14 @@ class SpeedSnek {
   draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.board.draw();
+    this.ui.draw();
 
-    myReq = requestAnimationFrame(() => this.draw());
+    myReq = requestAnimationFrame(this.draw);
   }
+}
+
+class UI {
+  draw() {}
 }
 
 class Board {
@@ -110,7 +123,7 @@ class Board {
 
   constructor() {
     this.snek = new Snek();
-    this.pellet = this.createPellet();
+    this.pellet = new Pellet(undefined, undefined, this.snek.snekPath);
   }
 
   update() {
@@ -134,7 +147,7 @@ class Board {
       this.pellet.r + this.snek.snekWidth / 2
     ) {
       this.snek.segments += 1;
-      this.pellet = this.createPellet();
+      this.pellet = new Pellet(undefined, undefined, this.snek.snekPath);
     }
 
     // snek vs wall collisions
@@ -158,18 +171,6 @@ class Board {
         console.log("ouch!");
       }
     }
-  }
-
-  createPellet() {
-    const buffer = 30;
-    const loc = {
-      x: Math.random() * (canvas.width - buffer * 2) + buffer,
-      y: Math.random() * (canvas.height - buffer * 2) + buffer,
-    };
-    const pellet = new Pellet(loc);
-    pellet.draw();
-
-    return pellet;
   }
 }
 
@@ -241,7 +242,7 @@ class Snek extends Cursor {
             center: segHead,
             radius: this.segLength,
           };
-          segHead = intersection(seg, arc);
+          segHead = intersection(seg, arc) as Point;
           this.snekPath.push(segHead);
 
           if (this.segments < this.snekPath.length) {
@@ -275,12 +276,50 @@ class Snek extends Cursor {
 }
 
 class Pellet {
-  loc: Point;
   r: number;
+  buffer: number;
+  noGo?: Path;
+  loc: Point;
 
-  constructor(loc: Point, r = 8) {
-    this.loc = loc;
+  constructor(r = 8, buffer = 30, noGo?: Path) {
     this.r = r;
+    this.buffer = buffer;
+    this.noGo = noGo;
+    this.loc = this.place();
+  }
+
+  place() {
+    let loc: Point;
+    let locValid: boolean;
+
+    while (true) {
+      locValid = true;
+      loc = {
+        x: Math.random() * (canvas.width - this.buffer * 2) + this.buffer,
+        y: Math.random() * (canvas.height - this.buffer * 2) + this.buffer,
+      };
+
+      if (this.noGo === undefined) {
+        return loc;
+      }
+
+      // Check if pellet location within buffer distance of noGo path.
+      for (let i = 0; i < this.noGo.length - 1; i++) {
+        if (
+          intersection([this.noGo[i], this.noGo[i + 1]], {
+            center: loc,
+            radius: this.r + this.buffer,
+          })
+        ) {
+          locValid = false;
+          break;
+        }
+      }
+      
+      if (locValid) {
+        return loc;
+      }
+    }
   }
 
   draw() {
@@ -291,8 +330,9 @@ class Pellet {
   }
 }
 
+let myReq: number;
+
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
-let myReq: number;
 
 const speedSnek = new SpeedSnek();
