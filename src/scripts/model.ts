@@ -8,20 +8,18 @@ interface Arc {
 }
 type Path = Point[];
 
-type Notification =
-  | ["pointermove", PointerEvent | Cursor]
-  | ["trimpath", number];
+type Notification = ["pointermove", Cursor] | ["trimpath", Snek];
 
 interface Mediator {
   notify(...args: Notification): void;
 }
 
-const gameCanvas = document.getElementById("game") as HTMLCanvasElement;
-
 export class GameModel implements Mediator {
   private cursor: Cursor;
   private snek: Snek;
   // private pellet: Pellet;
+
+  public score: number;
 
   constructor(
     cursor: Cursor,
@@ -41,14 +39,7 @@ export class GameModel implements Mediator {
 
     switch (event) {
       case "pointermove":
-        if ("x" in sender && "y" in sender) {
-          this.cursor.add({
-            x: sender.x - gameCanvas.offsetLeft,
-            y: sender.y - gameCanvas.offsetTop,
-          });
-        } else {
-          this.snek.update(sender);
-        }
+        this.snek.update(sender);
         break;
       case "trimpath":
         this.cursor.trim(sender);
@@ -73,20 +64,26 @@ class BaseComponent {
 }
 
 export class Cursor extends BaseComponent {
+  canvas: HTMLCanvasElement;
   path: Path;
 
-  constructor(path = []) {
+  constructor(canvas: HTMLCanvasElement, path = []) {
     super();
+    this.canvas = canvas;
     this.path = path;
   }
 
-  public add(point: Point) {
+  public moveListener(e: PointerEvent) {
+    const point = {
+      x: e.x - this.canvas.offsetLeft,
+      y: e.y - this.canvas.offsetTop,
+    };
     this.path.unshift(point);
     this.mediator.notify("pointermove", this);
   }
 
-  public trim(ix: number) {
-    this.path.splice(ix);
+  public trim(snek: Snek) {
+    this.path.splice(snek.pathTail);
   }
 }
 
@@ -95,22 +92,31 @@ export class Snek extends BaseComponent {
   segLength: number;
   snekPath: Path;
   snekWidth: number;
+  pathTail: number;
 
-  constructor(segments = 4, segLength = 50, snekWidth = 10) {
+  constructor(
+    startLoc: Point,
+    segments = 4,
+    segLength = 50,
+    snekWidth = 10,
+    pathBuffer = 0
+  ) {
     super();
 
-    let snekPath: Path = [];
-    for (let i = 0; i < segments + 1; i++) {
-      snekPath.push({
-        x: gameCanvas.width / 2,
-        y: gameCanvas.height / 2 + i * segLength,
-      });
+    this.snekPath = [startLoc];
+    for (let i = 0; i < segments; i++) {
+      const nextSeg = {
+        x: this.snekPath[i].x,
+        y: this.snekPath[i].y + segLength,
+      };
+
+      this.snekPath.push(nextSeg);
     }
 
     this.segments = segments;
     this.segLength = segLength;
-    this.snekPath = snekPath;
     this.snekWidth = snekWidth;
+    this.pathTail = pathBuffer;
   }
 
   public update(cursor: Cursor) {
@@ -133,12 +139,61 @@ export class Snek extends BaseComponent {
         }
       } else {
         if (this.segLength * 2 <= dist(segHead, p)) {
-          this.mediator.notify("trimpath", ix);
+          this.pathTail = ix;
+          this.mediator.notify("trimpath", this);
           break;
         }
       }
     }
   }
+}
+
+class Pellet {
+  // r: number;
+  // buffer: number;
+  // noGo?: Path;
+  // loc: Point;
+  // constructor(r = 8, buffer = 30, noGo?: Path) {
+  //   this.r = r;
+  //   this.buffer = buffer;
+  //   this.noGo = noGo;
+  //   this.loc = this.place();
+  // }
+  // draw() {
+  //   gameCtx.fillStyle = "blue";
+  //   gameCtx.beginPath();
+  //   gameCtx.arc(this.loc.x, this.loc.y, this.r, 0, Math.PI * 2);
+  //   gameCtx.fill();
+  // }
+  // place() {
+  //   let loc: Point;
+  //   let locValid: boolean;
+  //   while (true) {
+  //     locValid = true;
+  //     loc = {
+  //       x: Math.random() * (gameCanvas.width - this.buffer * 2) + this.buffer,
+  //       y: Math.random() * (gameCanvas.height - this.buffer * 2) + this.buffer,
+  //     };
+  //     if (this.noGo === undefined) {
+  //       return loc;
+  //     }
+  //     // Check if pellet location within buffer distance of noGo path.
+  //     for (let i = 0; i < this.noGo.length - 1; i++) {
+  //       if (
+  //         intersection([this.noGo[i], this.noGo[i + 1]], {
+  //           center: loc,
+  //           radius: this.r + this.buffer,
+  //         })
+  //       ) {
+  //         locValid = false;
+  //         break;
+  //       }
+  //     }
+  //     if (locValid) {
+  //       return loc;
+  //     }
+  //   }
+  // }
 }
 
 // path: Path;
@@ -211,58 +266,11 @@ export class Snek extends BaseComponent {
 // }
 // }
 
-class Pellet {
-  // r: number;
-  // buffer: number;
-  // noGo?: Path;
-  // loc: Point;
-  // constructor(r = 8, buffer = 30, noGo?: Path) {
-  //   this.r = r;
-  //   this.buffer = buffer;
-  //   this.noGo = noGo;
-  //   this.loc = this.place();
-  // }
-  // draw() {
-  //   gameCtx.fillStyle = "blue";
-  //   gameCtx.beginPath();
-  //   gameCtx.arc(this.loc.x, this.loc.y, this.r, 0, Math.PI * 2);
-  //   gameCtx.fill();
-  // }
-  // place() {
-  //   let loc: Point;
-  //   let locValid: boolean;
-  //   while (true) {
-  //     locValid = true;
-  //     loc = {
-  //       x: Math.random() * (gameCanvas.width - this.buffer * 2) + this.buffer,
-  //       y: Math.random() * (gameCanvas.height - this.buffer * 2) + this.buffer,
-  //     };
-  //     if (this.noGo === undefined) {
-  //       return loc;
-  //     }
-  //     // Check if pellet location within buffer distance of noGo path.
-  //     for (let i = 0; i < this.noGo.length - 1; i++) {
-  //       if (
-  //         intersection([this.noGo[i], this.noGo[i + 1]], {
-  //           center: loc,
-  //           radius: this.r + this.buffer,
-  //         })
-  //       ) {
-  //         locValid = false;
-  //         break;
-  //       }
-  //     }
-  //     if (locValid) {
-  //       return loc;
-  //     }
-  //   }
-  // }
-}
-
 function dist(p1: Point, p2: Point): number {
   return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 }
 
+// Return intersection point if lines intersect, false if no intersection.
 function intersection(seg1: Path, arc: Arc): Point | false;
 function intersection(seg1: Path, seg2: Path): Point | false;
 function intersection(seg1: Path, seg2: Arc | Path): Point | false {

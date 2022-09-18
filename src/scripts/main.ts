@@ -1,13 +1,18 @@
 import { GameModel, Cursor, Snek } from "./model";
 
-const cursor = new Cursor();
-const snek = new Snek();
+const gameCanvas = document.getElementById("game") as HTMLCanvasElement;
+const startLoc = {
+  x: gameCanvas.width / 2,
+  y: gameCanvas.height / 2,
+};
+
+const cursor = new Cursor(gameCanvas);
+const snek = new Snek(startLoc);
 const gameModel = new GameModel(cursor, snek);
 
 document.addEventListener("pointermove", (e) => {
-  gameModel.notify("pointermove", e);
+  cursor.moveListener(e);
 });
-
 
 // const gameCanvas = document.getElementById("game") as HTMLCanvasElement;
 // const gameCtx = gameCanvas.getContext("2d") as CanvasRenderingContext2D;
