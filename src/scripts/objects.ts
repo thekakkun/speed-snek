@@ -1,3 +1,5 @@
+import { GraphicsComponent } from "./graphics";
+
 interface Point {
   x: number;
   y: number;
@@ -14,7 +16,7 @@ interface Mediator {
   notify(...args: Notification): void;
 }
 
-export class GameModel implements Mediator {
+export class SpeedSnek implements Mediator {
   private cursor: Cursor;
   private snek: Snek;
   // private pellet: Pellet;
@@ -51,32 +53,50 @@ export class GameModel implements Mediator {
   }
 }
 
-class BaseComponent {
+class GameObject extends GraphicsComponent {
   protected mediator: Mediator;
 
   constructor(mediator?: Mediator) {
+    super();
     this.mediator = mediator!;
   }
 
   public setMediator(mediator: Mediator): void {
     this.mediator = mediator;
   }
+
+  public draw() {}
 }
 
-export class Cursor extends BaseComponent {
-  canvas: HTMLCanvasElement;
+export class Cursor extends GameObject {
+  target: HTMLCanvasElement;
   path: Path;
 
-  constructor(canvas: HTMLCanvasElement, path = []) {
+  constructor(target: HTMLCanvasElement, path = []) {
     super();
-    this.canvas = canvas;
+    this.target = target;
     this.path = path;
+  }
+
+  public draw() {
+    const context = this.target.getContext("2d") as CanvasRenderingContext2D;
+
+    if (this.path.length !== 0) {
+      context.strokeStyle = "red";
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(this.path[0].x, this.path[0].y);
+      this.path.forEach((point: Point) => {
+        context.lineTo(point.x, point.y);
+      });
+      context.stroke();
+    }
   }
 
   public moveListener(e: PointerEvent) {
     const point = {
-      x: e.x - this.canvas.offsetLeft,
-      y: e.y - this.canvas.offsetTop,
+      x: e.x - this.target.offsetLeft,
+      y: e.y - this.target.offsetTop,
     };
     this.path.unshift(point);
     this.mediator.notify("pointermove", this);
@@ -87,7 +107,7 @@ export class Cursor extends BaseComponent {
   }
 }
 
-export class Snek extends BaseComponent {
+export class Snek extends GameObject {
   segments: number;
   segLength: number;
   snekPath: Path;
@@ -117,6 +137,24 @@ export class Snek extends BaseComponent {
     this.segLength = segLength;
     this.snekWidth = snekWidth;
     this.pathTail = pathBuffer;
+  }
+
+  public draw() {
+    const target = this.getTarget();
+
+    if (target) {
+      const context = target.getContext("2d") as CanvasRenderingContext2D;
+      context.strokeStyle = "green";
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.lineWidth = this.snekWidth;
+      context.beginPath();
+      context.moveTo(this.snekPath[0].x, this.snekPath[0].y);
+      this.snekPath.forEach((point: Point) => {
+        context.lineTo(point.x, point.y);
+      });
+      context.stroke();
+    }
   }
 
   public update(cursor: Cursor) {

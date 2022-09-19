@@ -1,6 +1,9 @@
-import { GameModel, Cursor, Snek } from "./model";
+import { SpeedSnek, Cursor, Snek } from "./objects";
+import { GraphicsComposite } from "./graphics";
 
 const gameCanvas = document.getElementById("game") as HTMLCanvasElement;
+const uiCanvas = document.getElementById("ui") as HTMLCanvasElement;
+
 const startLoc = {
   x: gameCanvas.width / 2,
   y: gameCanvas.height / 2,
@@ -8,11 +11,23 @@ const startLoc = {
 
 const cursor = new Cursor(gameCanvas);
 const snek = new Snek(startLoc);
-const gameModel = new GameModel(cursor, snek);
+const gameModel = new SpeedSnek(cursor, snek);
+
+const gameGraphics = new GraphicsComposite(gameCanvas);
+gameGraphics.add(cursor);
+gameGraphics.add(snek);
+
+const uiGraphics = new GraphicsComposite(uiCanvas);
+
+const graphics = new GraphicsComposite();
+graphics.add(gameGraphics);
+graphics.add(uiGraphics);
 
 document.addEventListener("pointermove", (e) => {
   cursor.moveListener(e);
 });
+
+requestAnimationFrame(graphics.draw);
 
 // const gameCanvas = document.getElementById("game") as HTMLCanvasElement;
 // const gameCtx = gameCanvas.getContext("2d") as CanvasRenderingContext2D;
