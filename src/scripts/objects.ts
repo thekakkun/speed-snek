@@ -10,7 +10,8 @@ type Notification =
   | ["trimpath", Snek, number]
   | ["eatpellet", SpeedSnek]
   | ["hitself", SpeedSnek]
-  | ["hitwall", SpeedSnek];
+  | ["hitwall", SpeedSnek]
+  | ["tooslow", Ui];
 
 interface Mediator {
   notify(notification: Notification): void;
@@ -20,16 +21,17 @@ export class SpeedSnek implements Mediator {
   private cursor: Cursor;
   private snek: Snek;
   private pellet: Pellet;
-  public score: number;
+  public ui: Ui;
 
-  constructor(cursor: Cursor, snek: Snek, pellet: Pellet) {
+  constructor(cursor: Cursor, snek: Snek, pellet: Pellet, ui: Ui) {
     this.cursor = cursor;
     this.cursor.setMediator(this);
     this.snek = snek;
     this.snek.setMediator(this);
     this.pellet = pellet;
     this.pellet.setMediator(this);
-    this.score = 0;
+    this.ui = ui;
+    this.ui.setMediator(this);
   }
 
   public notify(notification: Notification): void {
@@ -38,7 +40,8 @@ export class SpeedSnek implements Mediator {
     switch (event) {
       case "pointermove":
         this.snek.update(sender);
-        this.checkCollision(sender);
+        this.checkCollision();
+        this.ui.setSpeed(sender);
         break;
 
       case "trimpath":
@@ -48,17 +51,24 @@ export class SpeedSnek implements Mediator {
 
       case "eatpellet":
         console.log("nom!");
-        this.score += 1;
-        this.snek.segments += 1;
-        this.pellet.placePellet(undefined, this.snek.snekPath);
+        this.snek.grow();
+        this.ui.update();
+        this.pellet.placePellet(this.snek.snekPath);
         break;
 
       case "hitself":
         console.log("ouch!");
+        this.ui.gameOver(event);
         break;
 
       case "hitwall":
         console.log("whoops!");
+        this.ui.gameOver(event);
+        break;
+
+      case "tooslow":
+        console.log("too slow!");
+        this.ui.gameOver(event);
         break;
 
       default:
@@ -67,8 +77,8 @@ export class SpeedSnek implements Mediator {
     }
   }
 
-  checkCollision(cursor: Cursor) {
-    if (cursor.target === undefined) {
+  checkCollision() {
+    if (this.cursor.target === undefined) {
       throw "Draw target is undefined";
     }
 
@@ -76,8 +86,11 @@ export class SpeedSnek implements Mediator {
 
     // snek vs pellet collisions
     if (
-      dist(snekHead, this.pellet.loc) <=
-      this.pellet.r + this.snek.snekWidth / 2
+      2 <= this.cursor.path.length &&
+      intersection([this.cursor.path[0], this.cursor.path[1]], {
+        center: this.pellet.loc,
+        radius: this.pellet.r + this.snek.snekWidth / 2,
+      })
     ) {
       this.notify(["eatpellet", this]);
     }
@@ -85,11 +98,11 @@ export class SpeedSnek implements Mediator {
     // // snek vs wall collisions
     if (
       snekHead.x - 1 <= 0 ||
-      cursor.target.width - 1 <= snekHead.x ||
+      this.cursor.target.width - 1 <= snekHead.x ||
       snekHead.y - 1 <= 0 ||
-      cursor.target.height - 1 <= snekHead.y
+      this.cursor.target.height - 1 <= snekHead.y
     ) {
-      console.log("whoops!");
+      this.notify(["hitwall", this]);
     }
 
     // snek vs snek collisions
@@ -101,7 +114,6 @@ export class SpeedSnek implements Mediator {
         )
       ) {
         this.notify(["hitself", this]);
-        console.log("ouch!");
       }
     }
   }
@@ -156,6 +168,16 @@ export class Cursor extends GameObject {
 
   public trim(ix: number) {
     this.path.splice(ix);
+  }
+
+  public getSpeed(window = 50) {
+    window = Math.min(window, this.path.length - 1);
+    let travelled = 0;
+    for (let i = 0; i < window; i++) {
+      travelled += dist(this.path[i], this.path[i + 1]);
+    }
+
+    return travelled / window;
   }
 }
 
@@ -227,19 +249,23 @@ export class Snek extends GameObject {
       }
     }
   }
+
+  public grow() {
+    this.segments += 1;
+  }
 }
 
 export class Pellet extends GameObject {
-  bb: [Point, Point];
   noGo: Path;
+  bb: [Point, Point];
   loc: Point;
   r: number;
   buffer: number;
 
-  constructor(bb: [Point, Point], noGo: Path, r = 8, buffer = 30) {
+  constructor(noGo: Path, bb: [Point, Point], r = 8, buffer = 30) {
     super();
-    this.bb = bb;
     this.noGo = noGo;
+    this.bb = bb;
     this.r = r;
     this.buffer = buffer;
     this.placePellet();
@@ -257,7 +283,7 @@ export class Pellet extends GameObject {
     context.fill();
   }
 
-  placePellet(bb?: [Point, Point], noGo?: Path) {
+  placePellet(noGo?: Path, bb?: [Point, Point]) {
     if (bb !== undefined) {
       this.bb = bb;
     }
@@ -309,4 +335,62 @@ export class Pellet extends GameObject {
   }
 }
 
-export class Ui extends GameObject {}
+export class Ui extends GameObject {
+  score: number;
+  speedLimit: number;
+  maxSpeed: number;
+  speed: number;
+  smoothSpeed: number;
+
+  constructor(score = 0, speedLimit = 0, maxSpeed = 80) {
+    super();
+
+    this.score = score;
+    this.speedLimit = speedLimit;
+    this.maxSpeed = maxSpeed;
+    this.speed = maxSpeed;
+    this.smoothSpeed = maxSpeed;
+  }
+
+  draw() {
+    if (this.target === undefined) {
+      throw "Draw target is undefined";
+    }
+
+    const context = this.target.getContext("2d") as CanvasRenderingContext2D;
+
+    const needleLoc = (this.target.width * this.smoothSpeed) / this.maxSpeed;
+    context.fillStyle = "green";
+    context.beginPath();
+    context.moveTo(needleLoc, 50);
+    context.lineTo(needleLoc - 5, 0);
+    context.lineTo(needleLoc + 5, 0);
+    context.fill();
+
+    context.strokeStyle = "orangeRed";
+    context.lineWidth = 5;
+    context.beginPath();
+    context.moveTo((this.target.width * this.speedLimit) / this.maxSpeed, 0);
+    context.lineTo((this.target.width * this.speedLimit) / this.maxSpeed, 50);
+    context.stroke();
+  }
+
+  update() {
+    this.score += 1;
+    this.speedLimit += 1;
+  }
+
+  setSpeed(cursor: Cursor) {
+    let currentSpeed = cursor.getSpeed();
+    this.smoothSpeed < currentSpeed ? this.smoothSpeed++ : this.smoothSpeed--;
+
+    if (this.smoothSpeed < this.speedLimit) {
+      this.mediator.notify(["tooslow", this]);
+    }
+  }
+
+  gameOver(reason: string) {
+    alert(`Game Over!\n${reason}\nYour score: ${this.score}`);
+    location.reload();
+  }
+}
