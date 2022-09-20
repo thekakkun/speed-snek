@@ -10,7 +10,12 @@ interface Arc {
 }
 type Path = Point[];
 
-type Notification = ["pointermove", Cursor] | ["trimpath", Snek];
+type Notification =
+  | ["pointermove", Cursor]
+  | ["trimpath", Snek, number]
+  | ["eatpellet", SpeedSnek]
+  | ["hitself", SpeedSnek]
+  | ["hitwall", SpeedSnek];
 
 interface Mediator {
   notify(notification: Notification): void;
@@ -20,7 +25,6 @@ export class SpeedSnek implements Mediator {
   private cursor: Cursor;
   private snek: Snek;
   private pellet: Pellet;
-
   public score: number;
 
   constructor(cursor: Cursor, snek: Snek, pellet: Pellet) {
@@ -30,6 +34,7 @@ export class SpeedSnek implements Mediator {
     this.snek.setMediator(this);
     this.pellet = pellet;
     this.pellet.setMediator(this);
+    this.score = 0;
   }
 
   public notify(notification: Notification): void {
@@ -38,9 +43,23 @@ export class SpeedSnek implements Mediator {
     switch (event) {
       case "pointermove":
         this.snek.update(sender);
+        this.checkCollision(sender);
         break;
       case "trimpath":
-        this.cursor.trim(sender);
+        const [, , ix] = notification;
+        this.cursor.trim(ix);
+        break;
+      case "eatpellet":
+        console.log("nom!");
+        this.score += 1;
+        this.snek.segments += 1;
+        this.pellet.placePellet(undefined, this.snek.snekPath);
+        break;
+      case "hitself":
+        console.log("ouch!");
+        break;
+      case "hitwall":
+        console.log("whoops!");
         break;
       default:
         const _exhaustiveCheck: never = sender;
@@ -48,8 +67,39 @@ export class SpeedSnek implements Mediator {
     }
   }
 
-  checkCollision() {
-    
+  checkCollision(cursor: Cursor) {
+    const snekHead = this.snek.snekPath[0];
+
+    // snek vs pellet collisions
+    if (
+      dist(snekHead, this.pellet.loc) <=
+      this.pellet.r + this.snek.snekWidth / 2
+    ) {
+      this.notify(["eatpellet", this]);
+    }
+
+    // // snek vs wall collisions
+    if (
+      snekHead.x - 1 <= 0 ||
+      cursor.target.width - 1 <= snekHead.x ||
+      snekHead.y - 1 <= 0 ||
+      cursor.target.height - 1 <= snekHead.y
+    ) {
+      console.log("whoops!");
+    }
+
+    // snek vs snek collisions
+    for (let i = 2; i < this.snek.snekPath.length - 1; i++) {
+      if (
+        intersection(
+          [this.snek.snekPath[0], this.snek.snekPath[1]],
+          [this.snek.snekPath[i], this.snek.snekPath[i + 1]]
+        )
+      ) {
+        this.notify(["hitself", this]);
+        console.log("ouch!");
+      }
+    }
   }
 }
 
@@ -99,8 +149,8 @@ export class Cursor extends GameObject {
     this.mediator.notify(["pointermove", this]);
   }
 
-  public trim(snek: Snek) {
-    this.path.splice(snek.pathTail);
+  public trim(ix: number) {
+    this.path.splice(ix);
   }
 }
 
@@ -109,7 +159,6 @@ export class Snek extends GameObject {
   segLength: number;
   snekPath: Path;
   snekWidth: number;
-  pathTail: number;
 
   constructor(
     startLoc: Point,
@@ -133,7 +182,6 @@ export class Snek extends GameObject {
     this.segments = segments;
     this.segLength = segLength;
     this.snekWidth = snekWidth;
-    this.pathTail = pathBuffer;
   }
 
   public draw() {
@@ -174,8 +222,7 @@ export class Snek extends GameObject {
         }
       } else {
         if (this.segLength * 2 <= dist(segHead, p)) {
-          this.pathTail = ix;
-          this.mediator.notify(["trimpath", this]);
+          this.mediator.notify(["trimpath", this, ix]);
           break;
         }
       }
@@ -196,7 +243,7 @@ export class Pellet extends GameObject {
     this.noGo = noGo;
     this.r = r;
     this.buffer = buffer;
-    this.loc = this.place();
+    this.placePellet();
   }
 
   draw() {
@@ -211,7 +258,14 @@ export class Pellet extends GameObject {
     context.fill();
   }
 
-  place() {
+  placePellet(bb?: [Point, Point], noGo?: Path) {
+    if (bb !== undefined) {
+      this.bb = bb;
+    }
+    if (noGo !== undefined) {
+      this.noGo = noGo;
+    }
+
     let loc: Point;
     let locValid: boolean;
 
@@ -227,9 +281,13 @@ export class Pellet extends GameObject {
           this.bb[1].y - this.buffer
         ),
       };
-      if (this.noGo === undefined) {
-        return loc;
+
+      // Place is fine if there is no noGo
+      if (this.noGo.length === 0) {
+        this.loc = loc;
+        break;
       }
+
       // Check if pellet location within buffer distance of noGo path.
       for (let i = 0; i < this.noGo.length - 1; i++) {
         if (
@@ -238,15 +296,63 @@ export class Pellet extends GameObject {
             radius: this.r + this.buffer,
           })
         ) {
+          // loc is too close to noGo, try again.
           locValid = false;
           break;
         }
       }
+
       if (locValid) {
-        return loc;
+        this.loc = loc;
+        break;
       }
     }
   }
+
+  // newPellet(noGo: Path, bb?: [Point, Point]) {
+  //   if (bb !== undefined) {
+  //     this.bb = bb;
+  //   }
+  //   this.noGo = noGo;
+  //   this.place();
+  // }
+
+  // place() {
+  //   let loc: Point;
+  //   let locValid: boolean;
+
+  //   while (true) {
+  //     locValid = true;
+  //     loc = {
+  //       x: randomBetween(
+  //         this.bb[0].x + this.buffer,
+  //         this.bb[1].x - this.buffer
+  //       ),
+  //       y: randomBetween(
+  //         this.bb[0].y + this.buffer,
+  //         this.bb[1].y - this.buffer
+  //       ),
+  //     };
+  //     if (this.noGo === undefined) {
+  //       return loc;
+  //     }
+  //     // Check if pellet location within buffer distance of noGo path.
+  //     for (let i = 0; i < this.noGo.length - 1; i++) {
+  //       if (
+  //         intersection([this.noGo[i], this.noGo[i + 1]], {
+  //           center: loc,
+  //           radius: this.r + this.buffer,
+  //         })
+  //       ) {
+  //         locValid = false;
+  //         break;
+  //       }
+  //     }
+  //     if (locValid) {
+  //       return loc;
+  //     }
+  //   }
+  // }
 }
 
 function dist(p1: Point, p2: Point): number {
