@@ -1,13 +1,10 @@
 export abstract class GraphicsComponent {
   protected parent!: GraphicsComponent | null;
   public target: HTMLCanvasElement | null;
+  public reqId: number;
 
   constructor(target?: HTMLCanvasElement) {
-    if (target !== undefined) {
-      this.target = target;
-    } else {
-      this.target = null;
-    }
+    this.target = target ? target : null;
   }
 
   public setParent(parent: GraphicsComponent | null) {
@@ -30,7 +27,6 @@ export abstract class GraphicsComponent {
 
 export class GraphicsComposite extends GraphicsComponent {
   protected children: GraphicsComponent[];
-  public reqId: number;
 
   constructor(target?: HTMLCanvasElement) {
     super(target);
@@ -60,6 +56,5 @@ export class GraphicsComposite extends GraphicsComponent {
     for (const child of this.children) {
       child.draw();
     }
-    this.reqId = requestAnimationFrame(this.draw);
   }
 }

@@ -27,7 +27,13 @@ document.addEventListener("pointermove", (e) => {
   cursor.moveListener(e);
 });
 
-requestAnimationFrame(graphics.draw);
+let draw = () => {
+  graphics.draw();
+  graphics.reqId = requestAnimationFrame(draw);
+};
+draw();
+
+// requestAnimationFrame(graphics.draw);
 
 // const gameCanvas = document.getElementById("game") as HTMLCanvasElement;
 // const gameCtx = gameCanvas.getContext("2d") as CanvasRenderingContext2D;
