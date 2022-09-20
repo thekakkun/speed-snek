@@ -1,10 +1,10 @@
 export abstract class GraphicsComponent {
   protected parent!: GraphicsComponent | null;
-  public target: HTMLCanvasElement | null;
+  public target?: HTMLCanvasElement;
   public reqId: number;
 
   constructor(target?: HTMLCanvasElement) {
-    this.target = target ? target : null;
+    this.target = target;
   }
 
   public setParent(parent: GraphicsComponent | null) {
@@ -15,18 +15,12 @@ export abstract class GraphicsComponent {
     return this.parent;
   }
 
-  public getTarget(): HTMLCanvasElement | null {
-    if (this.target !== null) {
-      return this.target;
-    }
-    return this.parent ? this.parent.getTarget() : null;
-  }
-
   public abstract draw(): void;
 }
 
 export class GraphicsComposite extends GraphicsComponent {
   protected children: GraphicsComponent[];
+  public target: HTMLCanvasElement;
 
   constructor(target?: HTMLCanvasElement) {
     super(target);
@@ -35,8 +29,8 @@ export class GraphicsComposite extends GraphicsComponent {
   }
 
   public add(component: GraphicsComponent) {
-    if (component.target === null) {
-      component.target = this.getTarget();
+    if (component.target === undefined) {
+      component.target = this.target;
     }
 
     this.children.push(component);
@@ -49,17 +43,12 @@ export class GraphicsComposite extends GraphicsComponent {
   }
 
   public draw() {
-    if (this.target && this.parent?.getTarget() === null) {
+    if (this.parent && this.parent.target === undefined) {
       const context = this.target.getContext("2d") as CanvasRenderingContext2D;
       context.clearRect(0, 0, this.target.width, this.target.height);
     }
     for (const child of this.children) {
       child.draw();
-    }
-
-    // where should this be if I want individual components to be stopped?
-    if (!this.parent) {
-      this.reqId = requestAnimationFrame(this.draw);
     }
   }
 }

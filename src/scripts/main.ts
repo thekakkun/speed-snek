@@ -9,7 +9,7 @@ const startLoc = {
   y: gameCanvas.height / 2,
 };
 
-const cursor = new Cursor(gameCanvas);
+const cursor = new Cursor();
 const snek = new Snek(startLoc);
 const pellet = new Pellet(
   [
@@ -32,7 +32,12 @@ graphics.add(gameGraphics);
 graphics.add(uiGraphics);
 
 document.addEventListener("pointermove", (e) => {
-  cursor.moveListener(e);
+  e.currentTarget;
+  const point = {
+    x: e.x - gameCanvas.offsetLeft,
+    y: e.y - gameCanvas.offsetTop,
+  };
+  cursor.add(point);
 });
 
 let draw = () => {

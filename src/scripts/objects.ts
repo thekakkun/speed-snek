@@ -47,6 +47,10 @@ export class SpeedSnek implements Mediator {
         return _exhaustiveCheck;
     }
   }
+
+  checkCollision() {
+    
+  }
 }
 
 class GameObject extends GraphicsComponent {
@@ -65,18 +69,19 @@ class GameObject extends GraphicsComponent {
 }
 
 export class Cursor extends GameObject {
-  target: HTMLCanvasElement;
   path: Path;
 
-  constructor(target: HTMLCanvasElement, path = []) {
+  constructor() {
     super();
-    this.target = target;
-    this.path = path;
+    this.path = [];
   }
 
   public draw() {
-    const context = this.target.getContext("2d") as CanvasRenderingContext2D;
+    if (this.target === undefined) {
+      throw "Draw target is undefined";
+    }
 
+    const context = this.target.getContext("2d") as CanvasRenderingContext2D;
     if (this.path.length !== 0) {
       context.strokeStyle = "red";
       context.lineWidth = 1;
@@ -89,11 +94,7 @@ export class Cursor extends GameObject {
     }
   }
 
-  public moveListener(e: PointerEvent) {
-    const point = {
-      x: e.x - this.target.offsetLeft,
-      y: e.y - this.target.offsetTop,
-    };
+  public add(point: Point) {
     this.path.unshift(point);
     this.mediator.notify(["pointermove", this]);
   }
@@ -136,21 +137,21 @@ export class Snek extends GameObject {
   }
 
   public draw() {
-    const target = this.getTarget();
-
-    if (target) {
-      const context = target.getContext("2d") as CanvasRenderingContext2D;
-      context.strokeStyle = "green";
-      context.lineCap = "round";
-      context.lineJoin = "round";
-      context.lineWidth = this.snekWidth;
-      context.beginPath();
-      context.moveTo(this.snekPath[0].x, this.snekPath[0].y);
-      this.snekPath.forEach((point: Point) => {
-        context.lineTo(point.x, point.y);
-      });
-      context.stroke();
+    if (this.target === undefined) {
+      throw "Draw target is undefined";
     }
+
+    const context = this.target.getContext("2d") as CanvasRenderingContext2D;
+    context.strokeStyle = "green";
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.lineWidth = this.snekWidth;
+    context.beginPath();
+    context.moveTo(this.snekPath[0].x, this.snekPath[0].y);
+    this.snekPath.forEach((point: Point) => {
+      context.lineTo(point.x, point.y);
+    });
+    context.stroke();
   }
 
   public update(cursor: Cursor) {
@@ -199,15 +200,15 @@ export class Pellet extends GameObject {
   }
 
   draw() {
-    const target = this.getTarget();
-
-    if (target) {
-      const context = target.getContext("2d") as CanvasRenderingContext2D;
-      context.fillStyle = "blue";
-      context.beginPath();
-      context.arc(this.loc.x, this.loc.y, this.r, 0, Math.PI * 2);
-      context.fill();
+    if (this.target === undefined) {
+      throw "Draw target is undefined";
     }
+
+    const context = this.target.getContext("2d") as CanvasRenderingContext2D;
+    context.fillStyle = "blue";
+    context.beginPath();
+    context.arc(this.loc.x, this.loc.y, this.r, 0, Math.PI * 2);
+    context.fill();
   }
 
   place() {
