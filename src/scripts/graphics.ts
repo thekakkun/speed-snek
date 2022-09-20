@@ -56,5 +56,10 @@ export class GraphicsComposite extends GraphicsComponent {
     for (const child of this.children) {
       child.draw();
     }
+
+    // where should this be if I want individual components to be stopped?
+    if (!this.parent) {
+      this.reqId = requestAnimationFrame(this.draw);
+    }
   }
 }

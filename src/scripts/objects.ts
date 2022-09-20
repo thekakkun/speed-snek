@@ -13,31 +13,27 @@ type Path = Point[];
 type Notification = ["pointermove", Cursor] | ["trimpath", Snek];
 
 interface Mediator {
-  notify(...args: Notification): void;
+  notify(notification: Notification): void;
 }
 
 export class SpeedSnek implements Mediator {
   private cursor: Cursor;
   private snek: Snek;
-  // private pellet: Pellet;
+  private pellet: Pellet;
 
   public score: number;
 
-  constructor(
-    cursor: Cursor,
-    snek: Snek
-    // pellet: Pellet
-  ) {
+  constructor(cursor: Cursor, snek: Snek, pellet: Pellet) {
     this.cursor = cursor;
     this.cursor.setMediator(this);
     this.snek = snek;
     this.snek.setMediator(this);
-    // this.pellet = pellet;
-    // this.pellet.setMediator(this);
+    this.pellet = pellet;
+    this.pellet.setMediator(this);
   }
 
-  public notify(...args: Notification): void {
-    const [event, sender] = args;
+  public notify(notification: Notification): void {
+    const [event, sender] = notification;
 
     switch (event) {
       case "pointermove":
@@ -99,7 +95,7 @@ export class Cursor extends GameObject {
       y: e.y - this.target.offsetTop,
     };
     this.path.unshift(point);
-    this.mediator.notify("pointermove", this);
+    this.mediator.notify(["pointermove", this]);
   }
 
   public trim(snek: Snek) {
@@ -178,7 +174,7 @@ export class Snek extends GameObject {
       } else {
         if (this.segLength * 2 <= dist(segHead, p)) {
           this.pathTail = ix;
-          this.mediator.notify("trimpath", this);
+          this.mediator.notify(["trimpath", this]);
           break;
         }
       }
@@ -186,123 +182,71 @@ export class Snek extends GameObject {
   }
 }
 
-class Pellet {
-  // r: number;
-  // buffer: number;
-  // noGo?: Path;
-  // loc: Point;
-  // constructor(r = 8, buffer = 30, noGo?: Path) {
-  //   this.r = r;
-  //   this.buffer = buffer;
-  //   this.noGo = noGo;
-  //   this.loc = this.place();
-  // }
-  // draw() {
-  //   gameCtx.fillStyle = "blue";
-  //   gameCtx.beginPath();
-  //   gameCtx.arc(this.loc.x, this.loc.y, this.r, 0, Math.PI * 2);
-  //   gameCtx.fill();
-  // }
-  // place() {
-  //   let loc: Point;
-  //   let locValid: boolean;
-  //   while (true) {
-  //     locValid = true;
-  //     loc = {
-  //       x: Math.random() * (gameCanvas.width - this.buffer * 2) + this.buffer,
-  //       y: Math.random() * (gameCanvas.height - this.buffer * 2) + this.buffer,
-  //     };
-  //     if (this.noGo === undefined) {
-  //       return loc;
-  //     }
-  //     // Check if pellet location within buffer distance of noGo path.
-  //     for (let i = 0; i < this.noGo.length - 1; i++) {
-  //       if (
-  //         intersection([this.noGo[i], this.noGo[i + 1]], {
-  //           center: loc,
-  //           radius: this.r + this.buffer,
-  //         })
-  //       ) {
-  //         locValid = false;
-  //         break;
-  //       }
-  //     }
-  //     if (locValid) {
-  //       return loc;
-  //     }
-  //   }
-  // }
+export class Pellet extends GameObject {
+  bb: [Point, Point];
+  noGo: Path;
+  loc: Point;
+  r: number;
+  buffer: number;
+
+  constructor(bb: [Point, Point], noGo: Path, r = 8, buffer = 30) {
+    super();
+    this.bb = bb;
+    this.noGo = noGo;
+    this.r = r;
+    this.buffer = buffer;
+    this.loc = this.place();
+  }
+
+  draw() {
+    const target = this.getTarget();
+
+    if (target) {
+      const context = target.getContext("2d") as CanvasRenderingContext2D;
+      context.fillStyle = "blue";
+      context.beginPath();
+      context.arc(this.loc.x, this.loc.y, this.r, 0, Math.PI * 2);
+      context.fill();
+    }
+  }
+
+  place() {
+    let loc: Point;
+    let locValid: boolean;
+
+    while (true) {
+      locValid = true;
+      loc = {
+        x: randomBetween(
+          this.bb[0].x + this.buffer,
+          this.bb[1].x - this.buffer
+        ),
+        y: randomBetween(
+          this.bb[0].y + this.buffer,
+          this.bb[1].y - this.buffer
+        ),
+      };
+      if (this.noGo === undefined) {
+        return loc;
+      }
+      // Check if pellet location within buffer distance of noGo path.
+      for (let i = 0; i < this.noGo.length - 1; i++) {
+        if (
+          intersection([this.noGo[i], this.noGo[i + 1]], {
+            center: loc,
+            radius: this.r + this.buffer,
+          })
+        ) {
+          locValid = false;
+          break;
+        }
+      }
+      if (locValid) {
+        return loc;
+      }
+    }
+  }
 }
-
-// path: Path;
-
-// constructor(path: Path = [{ x: 0, y: 0 }]) {
-//   this.path = path;
-// }
-
-// draw() {
-//   gameCtx.strokeStyle = "red";
-//   gameCtx.lineWidth = 1;
-//   gameCtx.beginPath();
-//   gameCtx.moveTo(this.path[0].x, this.path[0].y);
-//   this.path.forEach((point: Point) => {
-//     gameCtx.lineTo(point.x, point.y);
-//   });
-//   gameCtx.stroke();
-// }
-
-// getSpeed(window = 3) {
-//   // TODO: How is this influenced by screen resolution & scaling?
-//   window = Math.min(window, this.path.length - 1);
-//   let travelled = 0;
-//   for (let i = 0; i < window; i++) {
-//     travelled += dist(this.path[i], this.path[i + 1]);
-//   }
-
-//   return travelled / window;
-// }
-
-// class Snek extends Cursor {
-
-// update() {
-//   this.snekPath = [this.path[0]];
-//   let segHead = this.snekPath[this.snekPath.length - 1];
-//   for (let [ix, p] of this.path.entries()) {
-//     if (this.snekPath.length <= this.segments) {
-//       while (this.segLength < dist(segHead, p)) {
-//         const seg = [this.path[ix - 1], p];
-//         const arc = {
-//           center: segHead,
-//           radius: this.segLength,
-//         };
-//         segHead = intersection(seg, arc) as Point;
-//         this.snekPath.push(segHead);
-//         if (this.segments < this.snekPath.length) {
-//           break;
-//         }
-//       }
-//     } else {
-//       if (this.segLength * 2 <= dist(segHead, p)) {
-//         this.path.splice(ix);
-//         break;
-//       }
-//     }
-//   }
-// }
-// draw() {
-//   super.draw();
-//   gameCtx.strokeStyle = "green";
-//   gameCtx.lineCap = "round";
-//   gameCtx.lineJoin = "round";
-//   gameCtx.lineWidth = this.snekWidth;
-//   gameCtx.beginPath();
-//   gameCtx.moveTo(this.snekPath[0].x, this.snekPath[0].y);
-//   this.snekPath.forEach((point: Point) => {
-//     gameCtx.lineTo(point.x, point.y);
-//   });
-//   gameCtx.stroke();
-// }
-// }
 
 function dist(p1: Point, p2: Point): number {
   return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
@@ -367,4 +311,8 @@ function intersection(seg1: Path, seg2: Arc | Path): Point | false {
       y: y1 + t * (y2 - y1),
     };
   }
+}
+
+function randomBetween(min: number, max: number) {
+  return Math.random() * (max - min) + min;
 }

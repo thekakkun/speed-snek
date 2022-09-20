@@ -1,4 +1,4 @@
-import { SpeedSnek, Cursor, Snek } from "./objects";
+import { SpeedSnek, Cursor, Snek, Pellet } from "./objects";
 import { GraphicsComposite } from "./graphics";
 
 const gameCanvas = document.getElementById("game") as HTMLCanvasElement;
@@ -11,11 +11,19 @@ const startLoc = {
 
 const cursor = new Cursor(gameCanvas);
 const snek = new Snek(startLoc);
-const gameModel = new SpeedSnek(cursor, snek);
+const pellet = new Pellet(
+  [
+    { x: 0, y: 0 },
+    { x: gameCanvas.width, y: gameCanvas.height },
+  ],
+  snek.snekPath
+);
+const gameModel = new SpeedSnek(cursor, snek, pellet);
 
 const gameGraphics = new GraphicsComposite(gameCanvas);
 gameGraphics.add(cursor);
 gameGraphics.add(snek);
+gameGraphics.add(pellet);
 
 const uiGraphics = new GraphicsComposite(uiCanvas);
 
