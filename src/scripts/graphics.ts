@@ -1,5 +1,5 @@
 import { Point } from "./geometry";
-import { Cursor, Snek, Pellet, Ui } from "./model";
+import { Cursor, Snek, Pellet, SpeedSnek } from "./model";
 
 abstract class Component {
   protected parent!: Component | null;
@@ -105,21 +105,13 @@ export class PelletGraphics extends GraphicsComponent<Pellet> {
   }
 }
 
-export class UiGraphics extends GraphicsComponent<Ui> {
-  constructor(data: Ui, context: CanvasRenderingContext2D) {
+export class UiGraphics extends GraphicsComponent<SpeedSnek> {
+  constructor(data: SpeedSnek, context: CanvasRenderingContext2D) {
     super(data, context);
   }
 
   draw() {
     const needleLoc = this.scaleX(this.data.smoothSpeed);
-
-    // Speedometer needle
-    this.context.fillStyle = "green";
-    this.context.beginPath();
-    this.context.moveTo(needleLoc, 50);
-    this.context.lineTo(needleLoc - 5, 0);
-    this.context.lineTo(needleLoc + 5, 0);
-    this.context.fill();
 
     // Speed limit line
     this.context.strokeStyle = "orangeRed";
@@ -128,6 +120,14 @@ export class UiGraphics extends GraphicsComponent<Ui> {
     this.context.moveTo(this.scaleX(this.data.speedLimit), 0);
     this.context.lineTo(this.scaleX(this.data.speedLimit), 50);
     this.context.stroke();
+
+    // Speedometer needle
+    this.context.fillStyle = "green";
+    this.context.beginPath();
+    this.context.moveTo(needleLoc, 50);
+    this.context.lineTo(needleLoc - 5, 0);
+    this.context.lineTo(needleLoc + 5, 0);
+    this.context.fill();
   }
 
   scaleX(value: number) {

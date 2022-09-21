@@ -10,37 +10,43 @@ type Notification =
   | ["eatpellet", ConcreteMediator]
   | ["hitself", ConcreteMediator]
   | ["hitwall", ConcreteMediator]
-  | ["tooslow", Ui];
+  | ["tooslow", SpeedSnek];
 
 interface Mediator {
   notify(notification: Notification): void;
 }
 
+// events are sent here, and the mediator passes them on to the correct handler.
 export class ConcreteMediator implements Mediator {
+  public speedSnek: SpeedSnek;
   private cursor: Cursor;
   private snek: Snek;
   private pellet: Pellet;
-  public ui: Ui;
 
-  constructor(cursor: Cursor, snek: Snek, pellet: Pellet, ui: Ui) {
+  constructor(
+    speedSnek: SpeedSnek,
+    cursor: Cursor,
+    snek: Snek,
+    pellet: Pellet
+  ) {
+    this.speedSnek = speedSnek;
+    this.speedSnek.setMediator(this);
     this.cursor = cursor;
     this.cursor.setMediator(this);
     this.snek = snek;
     this.snek.setMediator(this);
     this.pellet = pellet;
     this.pellet.setMediator(this);
-    this.ui = ui;
-    this.ui.setMediator(this);
   }
 
   public notify(notification: Notification): void {
-    const [event, sender] = notification;
+    const [event, sender, ...args] = notification;
 
     switch (event) {
       case "pointermove":
         this.snek.update(sender);
         this.checkCollision();
-        this.ui.setSpeed(sender);
+        this.speedSnek.updateSpeed(sender);
         break;
 
       case "trimpath":
@@ -51,23 +57,23 @@ export class ConcreteMediator implements Mediator {
       case "eatpellet":
         console.log("nom!");
         this.snek.grow();
-        this.ui.update();
+        this.speedSnek.update();
         this.pellet.place(this.snek.path);
         break;
 
       case "hitself":
         console.log("ouch!");
-        this.ui.gameOver(event);
+        this.speedSnek.gameOver(event);
         break;
 
       case "hitwall":
         console.log("whoops!");
-        this.ui.gameOver(event);
+        this.speedSnek.gameOver(event);
         break;
 
       case "tooslow":
         console.log("faster!");
-        this.ui.gameOver(event);
+        this.speedSnek.gameOver(event);
         break;
 
       default:
@@ -114,7 +120,9 @@ export class ConcreteMediator implements Mediator {
   }
 }
 
-abstract class GameObject {
+// Components contain some sort of logic and can reference their mediators
+// Things in the game that have data that need updating.
+abstract class Component {
   protected mediator: Mediator;
 
   constructor(mediator?: Mediator) {
@@ -126,7 +134,55 @@ abstract class GameObject {
   }
 }
 
-export class Cursor extends GameObject {
+export class SpeedSnek extends Component {
+  score: number;
+  speedLimit: number;
+  maxSpeed: number;
+  speed: number;
+  smoothSpeed: number;
+
+  constructor(score = 0, speedLimit = 0, maxSpeed = 10) {
+    super();
+
+    this.score = score;
+    this.speedLimit = speedLimit;
+    this.maxSpeed = maxSpeed;
+    this.speed = speedLimit;
+    this.smoothSpeed = speedLimit;
+  }
+
+  update() {
+    this.score += 1;
+    this.speedLimit += 0.1;
+  }
+
+  updateSpeed(cursor: Cursor) {
+    const alpha = 0.1;
+    this.speed = cursor.getSpeed();
+    if (this.speed !== NaN) {
+      this.smoothSpeed = alpha * this.speed + (1 - alpha) * this.smoothSpeed;
+    }
+
+    if (this.smoothSpeed < this.speedLimit) {
+      this.mediator.notify(["tooslow", this]);
+    }
+  }
+
+  gameOver(reason: Notification[0]) {
+    const message = {
+      hitself: "You crashed into yourself!",
+      hitwall: "You crashed into a wall!",
+      tooslow: "You were too slow!",
+    };
+
+    if (process.env.NODE_ENV === "production") {
+      alert(`Game Over!\n${message[reason]}\nYour score: ${this.score}`);
+      location.reload();
+    }
+  }
+}
+
+export class Cursor extends Component {
   path: Path;
   timeStamp: number[];
   target: HTMLCanvasElement;
@@ -172,7 +228,7 @@ export class Cursor extends GameObject {
   }
 }
 
-export class Snek extends GameObject {
+export class Snek extends Component {
   segments: number;
   segLength: number;
   path: Path;
@@ -228,7 +284,7 @@ export class Snek extends GameObject {
   }
 }
 
-export class Pellet extends GameObject {
+export class Pellet extends Component {
   target: HTMLCanvasElement;
   loc: Point;
   r: number;
@@ -282,41 +338,5 @@ export class Pellet extends GameObject {
         break;
       }
     }
-  }
-}
-
-export class Ui extends GameObject {
-  score: number;
-  speedLimit: number;
-  maxSpeed: number;
-  speed: number;
-  smoothSpeed: number;
-
-  constructor(score = 0, speedLimit = 0, maxSpeed = 10) {
-    super();
-
-    this.score = score;
-    this.speedLimit = speedLimit;
-    this.maxSpeed = maxSpeed;
-    this.speed = speedLimit;
-    this.smoothSpeed = speedLimit;
-  }
-
-  update() {
-    this.score += 1;
-    this.speedLimit += 0.1;
-  }
-
-  setSpeed(cursor: Cursor) {
-    const alpha = 0.1;
-    this.speed = cursor.getSpeed();
-    if (this.speed !== NaN) {
-      this.smoothSpeed = alpha * this.speed + (1 - alpha) * this.smoothSpeed;
-    }
-  }
-
-  gameOver(reason: Notification[0]) {
-    // alert(`Game Over!\n${reason}\nYour score: ${this.score}`);
-    // location.reload();
   }
 }
