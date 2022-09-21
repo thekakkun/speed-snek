@@ -52,7 +52,7 @@ export class ConcreteMediator implements Mediator {
         console.log("nom!");
         this.snek.grow();
         this.ui.update();
-        this.pellet.place(this.snek.snekPath);
+        this.pellet.place(this.snek.path);
         break;
 
       case "hitself":
@@ -77,7 +77,7 @@ export class ConcreteMediator implements Mediator {
   }
 
   checkCollision() {
-    const snekHead = this.snek.snekPath[0];
+    const snekHead = this.snek.path[0];
 
     // snek vs pellet collisions
     if (
@@ -101,11 +101,11 @@ export class ConcreteMediator implements Mediator {
     }
 
     // snek vs snek collisions
-    for (let i = 2; i < this.snek.snekPath.length - 1; i++) {
+    for (let i = 2; i < this.snek.path.length - 1; i++) {
       if (
         intersection(
-          [this.snek.snekPath[0], this.snek.snekPath[1]],
-          [this.snek.snekPath[i], this.snek.snekPath[i + 1]]
+          [this.snek.path[0], this.snek.path[1]],
+          [this.snek.path[i], this.snek.path[i + 1]]
         )
       ) {
         this.notify(["hitself", this]);
@@ -175,20 +175,20 @@ export class Cursor extends GameObject {
 export class Snek extends GameObject {
   segments: number;
   segLength: number;
-  snekPath: Path;
+  path: Path;
   snekWidth: number;
 
   constructor(startLoc: Point, segments = 4, segLength = 50, snekWidth = 10) {
     super();
 
-    this.snekPath = [startLoc];
+    this.path = [startLoc];
     for (let i = 0; i < segments; i++) {
       const nextSeg = {
-        x: this.snekPath[i].x,
-        y: this.snekPath[i].y + segLength,
+        x: this.path[i].x,
+        y: this.path[i].y + segLength,
       };
 
-      this.snekPath.push(nextSeg);
+      this.path.push(nextSeg);
     }
 
     this.segments = segments;
@@ -198,10 +198,10 @@ export class Snek extends GameObject {
 
   public update(cursor: Cursor) {
     const cursorPath = cursor.path;
-    this.snekPath = [cursorPath[0]];
-    let segHead = this.snekPath[this.snekPath.length - 1];
+    this.path = [cursorPath[0]];
+    let segHead = this.path[this.path.length - 1];
     for (let [ix, p] of cursorPath.entries()) {
-      if (this.snekPath.length <= this.segments) {
+      if (this.path.length <= this.segments) {
         while (this.segLength < dist(segHead, p)) {
           const seg = [cursorPath[ix - 1], p];
           const arc = {
@@ -209,8 +209,8 @@ export class Snek extends GameObject {
             radius: this.segLength,
           };
           segHead = intersection(seg, arc) as Point;
-          this.snekPath.push(segHead);
-          if (this.segments < this.snekPath.length) {
+          this.path.push(segHead);
+          if (this.segments < this.path.length) {
             break;
           }
         }
@@ -229,27 +229,22 @@ export class Snek extends GameObject {
 }
 
 export class Pellet extends GameObject {
-  noGo: Path;
-  bb: [Point, Point];
+  target: HTMLCanvasElement;
   loc: Point;
   r: number;
-  buffer: number;
 
-  constructor(noGo: Path, bb: [Point, Point], r = 8, buffer = 30) {
+  constructor(target: HTMLCanvasElement, noGo: Path, r = 8) {
     super();
-    this.noGo = noGo;
-    this.bb = bb;
+
     this.r = r;
-    this.buffer = buffer;
-    this.place();
+    this.target = target;
+    this.place(noGo);
   }
 
-  place(noGo?: Path, bb?: [Point, Point]) {
-    if (bb !== undefined) {
-      this.bb = bb;
-    }
+  // Choose random points within bb (bounding box) until no walls or snek
+  place(noGo: Path, buffer = 30) {
     if (noGo !== undefined) {
-      this.noGo = noGo;
+      noGo = noGo;
     }
 
     let loc: Point;
@@ -258,28 +253,22 @@ export class Pellet extends GameObject {
     while (true) {
       locValid = true;
       loc = {
-        x: randomBetween(
-          this.bb[0].x + this.buffer,
-          this.bb[1].x - this.buffer
-        ),
-        y: randomBetween(
-          this.bb[0].y + this.buffer,
-          this.bb[1].y - this.buffer
-        ),
+        x: randomBetween(buffer, this.target.width - buffer),
+        y: randomBetween(buffer, this.target.height - buffer),
       };
 
       // Place is fine if there is no noGo
-      if (this.noGo.length === 0) {
+      if (noGo.length === 0) {
         this.loc = loc;
         break;
       }
 
       // Check if pellet location within buffer distance of noGo path.
-      for (let i = 0; i < this.noGo.length - 1; i++) {
+      for (let i = 0; i < noGo.length - 1; i++) {
         if (
-          intersection([this.noGo[i], this.noGo[i + 1]], {
+          intersection([noGo[i], noGo[i + 1]], {
             center: loc,
-            radius: this.r + this.buffer,
+            radius: this.r + buffer,
           })
         ) {
           // loc is too close to noGo, try again.

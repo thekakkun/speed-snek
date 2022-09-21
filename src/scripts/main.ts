@@ -5,7 +5,7 @@ import {
   SnekGraphics,
   UiGraphics,
 } from "./graphics";
-import { ConcreteMediator, Cursor, Snek, Pellet, Ui } from "./objects";
+import { ConcreteMediator, Cursor, Snek, Pellet, Ui } from "./model";
 
 const gameCanvas = document.getElementById("game") as HTMLCanvasElement;
 const gameContext = gameCanvas.getContext("2d") as CanvasRenderingContext2D;
@@ -17,10 +17,7 @@ const snek = new Snek({
   x: gameCanvas.width / 2,
   y: gameCanvas.height / 2,
 });
-const pellet = new Pellet(snek.snekPath, [
-  { x: 0, y: 0 },
-  { x: gameCanvas.width, y: gameCanvas.height },
-]);
+const pellet = new Pellet(gameCanvas, snek.path);
 const ui = new Ui();
 const gameModel = new ConcreteMediator(cursor, snek, pellet, ui);
 

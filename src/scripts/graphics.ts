@@ -1,5 +1,5 @@
 import { Point } from "./geometry";
-import { Cursor, Snek, Pellet, Ui } from "./objects";
+import { Cursor, Snek, Pellet, Ui } from "./model";
 
 abstract class Component {
   protected parent!: Component | null;
@@ -78,8 +78,8 @@ export class SnekGraphics extends GraphicsComponent<Snek> {
     this.context.lineJoin = "round";
     this.context.lineWidth = this.data.snekWidth;
     this.context.beginPath();
-    this.context.moveTo(this.data.snekPath[0].x, this.data.snekPath[0].y);
-    this.data.snekPath.forEach((point: Point) => {
+    this.context.moveTo(this.data.path[0].x, this.data.path[0].y);
+    this.data.path.forEach((point: Point) => {
       this.context.lineTo(point.x, point.y);
     });
     this.context.stroke();
