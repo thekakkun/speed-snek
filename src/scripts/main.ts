@@ -22,7 +22,9 @@ const speedSnek = new SpeedSnek();
 const mediator = new ConcreteMediator(speedSnek, cursor, snek, pellet);
 
 const gameGraphics = new Composite();
-gameGraphics.add(new CursorGraphics(cursor, gameContext));
+if (process.env.NODE_ENV === "development") {
+  gameGraphics.add(new CursorGraphics(cursor, gameContext));
+}
 gameGraphics.add(new SnekGraphics(snek, gameContext));
 gameGraphics.add(new PelletGraphics(pellet, gameContext));
 
