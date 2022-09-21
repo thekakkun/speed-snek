@@ -1,5 +1,4 @@
 import { dist, intersection, Path, Point } from "./geometry";
-import { GraphicsComponent } from "./graphics";
 
 function randomBetween(min: number, max: number) {
   return Math.random() * (max - min) + min;
@@ -8,16 +7,16 @@ function randomBetween(min: number, max: number) {
 type Notification =
   | ["pointermove", Cursor]
   | ["trimpath", Snek, number]
-  | ["eatpellet", SpeedSnek]
-  | ["hitself", SpeedSnek]
-  | ["hitwall", SpeedSnek]
+  | ["eatpellet", ConcreteMediator]
+  | ["hitself", ConcreteMediator]
+  | ["hitwall", ConcreteMediator]
   | ["tooslow", Ui];
 
 interface Mediator {
   notify(notification: Notification): void;
 }
 
-export class SpeedSnek implements Mediator {
+export class ConcreteMediator implements Mediator {
   private cursor: Cursor;
   private snek: Snek;
   private pellet: Pellet;
@@ -53,7 +52,7 @@ export class SpeedSnek implements Mediator {
         console.log("nom!");
         this.snek.grow();
         this.ui.update();
-        this.pellet.placePellet(this.snek.snekPath);
+        this.pellet.place(this.snek.snekPath);
         break;
 
       case "hitself":
@@ -67,7 +66,7 @@ export class SpeedSnek implements Mediator {
         break;
 
       case "tooslow":
-        console.log("too slow!");
+        console.log("faster!");
         this.ui.gameOver(event);
         break;
 
@@ -78,10 +77,6 @@ export class SpeedSnek implements Mediator {
   }
 
   checkCollision() {
-    if (this.cursor.target === undefined) {
-      throw "Draw target is undefined";
-    }
-
     const snekHead = this.snek.snekPath[0];
 
     // snek vs pellet collisions
@@ -119,53 +114,39 @@ export class SpeedSnek implements Mediator {
   }
 }
 
-class GameObject extends GraphicsComponent {
+abstract class GameObject {
   protected mediator: Mediator;
 
   constructor(mediator?: Mediator) {
-    super();
     this.mediator = mediator!;
   }
 
   public setMediator(mediator: Mediator): void {
     this.mediator = mediator;
   }
-
-  public draw() {}
 }
 
 export class Cursor extends GameObject {
   path: Path;
   timeStamp: number[];
-  target!: HTMLCanvasElement; // Should come from GraphicsComposite
+  target: HTMLCanvasElement;
 
-  constructor() {
+  constructor(target: HTMLCanvasElement) {
     super();
     this.path = [];
     this.timeStamp = [];
+    this.target = target;
+    this.moveHandler = this.moveHandler.bind(this);
   }
 
-  public draw() {
-    if (this.target === undefined) {
-      throw "Draw target is undefined";
-    }
+  public moveHandler(e: PointerEvent) {
+    const point = {
+      x: e.x - this.target.offsetLeft,
+      y: e.y - this.target.offsetTop,
+    };
 
-    const context = this.target.getContext("2d") as CanvasRenderingContext2D;
-    if (this.path.length !== 0) {
-      context.strokeStyle = "red";
-      context.lineWidth = 1;
-      context.beginPath();
-      context.moveTo(this.path[0].x, this.path[0].y);
-      this.path.forEach((point: Point) => {
-        context.lineTo(point.x, point.y);
-      });
-      context.stroke();
-    }
-  }
-
-  public add(point: Point, timeStamp: number) {
     this.path.unshift(point);
-    this.timeStamp.unshift(timeStamp);
+    this.timeStamp.unshift(e.timeStamp);
     this.mediator.notify(["pointermove", this]);
   }
 
@@ -215,24 +196,6 @@ export class Snek extends GameObject {
     this.snekWidth = snekWidth;
   }
 
-  public draw() {
-    if (this.target === undefined) {
-      throw "Draw target is undefined";
-    }
-
-    const context = this.target.getContext("2d") as CanvasRenderingContext2D;
-    context.strokeStyle = "green";
-    context.lineCap = "round";
-    context.lineJoin = "round";
-    context.lineWidth = this.snekWidth;
-    context.beginPath();
-    context.moveTo(this.snekPath[0].x, this.snekPath[0].y);
-    this.snekPath.forEach((point: Point) => {
-      context.lineTo(point.x, point.y);
-    });
-    context.stroke();
-  }
-
   public update(cursor: Cursor) {
     const cursorPath = cursor.path;
     this.snekPath = [cursorPath[0]];
@@ -278,22 +241,10 @@ export class Pellet extends GameObject {
     this.bb = bb;
     this.r = r;
     this.buffer = buffer;
-    this.placePellet();
+    this.place();
   }
 
-  draw() {
-    if (this.target === undefined) {
-      throw "Draw target is undefined";
-    }
-
-    const context = this.target.getContext("2d") as CanvasRenderingContext2D;
-    context.fillStyle = "blue";
-    context.beginPath();
-    context.arc(this.loc.x, this.loc.y, this.r, 0, Math.PI * 2);
-    context.fill();
-  }
-
-  placePellet(noGo?: Path, bb?: [Point, Point]) {
+  place(noGo?: Path, bb?: [Point, Point]) {
     if (bb !== undefined) {
       this.bb = bb;
     }
@@ -362,32 +313,9 @@ export class Ui extends GameObject {
     this.smoothSpeed = speedLimit;
   }
 
-  draw() {
-    if (this.target === undefined) {
-      throw "Draw target is undefined";
-    }
-
-    const context = this.target.getContext("2d") as CanvasRenderingContext2D;
-
-    const needleLoc = (this.target.width * this.smoothSpeed) / this.maxSpeed;
-    context.fillStyle = "green";
-    context.beginPath();
-    context.moveTo(needleLoc, 50);
-    context.lineTo(needleLoc - 5, 0);
-    context.lineTo(needleLoc + 5, 0);
-    context.fill();
-
-    context.strokeStyle = "orangeRed";
-    context.lineWidth = 5;
-    context.beginPath();
-    context.moveTo((this.target.width * this.speedLimit) / this.maxSpeed, 0);
-    context.lineTo((this.target.width * this.speedLimit) / this.maxSpeed, 50);
-    context.stroke();
-  }
-
   update() {
     this.score += 1;
-    this.speedLimit += .02;
+    this.speedLimit += 0.1;
   }
 
   setSpeed(cursor: Cursor) {
@@ -396,10 +324,9 @@ export class Ui extends GameObject {
     if (this.speed !== NaN) {
       this.smoothSpeed = alpha * this.speed + (1 - alpha) * this.smoothSpeed;
     }
-    console.log(this.smoothSpeed);
   }
 
-  gameOver(reason: string) {
+  gameOver(reason: Notification[0]) {
     // alert(`Game Over!\n${reason}\nYour score: ${this.score}`);
     // location.reload();
   }

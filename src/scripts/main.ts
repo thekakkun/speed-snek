@@ -1,10 +1,18 @@
-import { SpeedSnek, Cursor, Snek, Pellet, Ui } from "./objects";
-import { GraphicsComposite } from "./graphics";
+import {
+  Composite,
+  CursorGraphics,
+  PelletGraphics,
+  SnekGraphics,
+  UiGraphics,
+} from "./graphics";
+import { ConcreteMediator, Cursor, Snek, Pellet, Ui } from "./objects";
 
 const gameCanvas = document.getElementById("game") as HTMLCanvasElement;
+const gameContext = gameCanvas.getContext("2d") as CanvasRenderingContext2D;
 const uiCanvas = document.getElementById("ui") as HTMLCanvasElement;
+const uiContext = uiCanvas.getContext("2d") as CanvasRenderingContext2D;
 
-const cursor = new Cursor();
+const cursor = new Cursor(gameCanvas);
 const snek = new Snek({
   x: gameCanvas.width / 2,
   y: gameCanvas.height / 2,
@@ -14,31 +22,27 @@ const pellet = new Pellet(snek.snekPath, [
   { x: gameCanvas.width, y: gameCanvas.height },
 ]);
 const ui = new Ui();
-const gameModel = new SpeedSnek(cursor, snek, pellet, ui);
+const gameModel = new ConcreteMediator(cursor, snek, pellet, ui);
 
-const gameGraphics = new GraphicsComposite(gameCanvas);
-gameGraphics.add(cursor);
-gameGraphics.add(snek);
-gameGraphics.add(pellet);
+const gameGraphics = new Composite();
+gameGraphics.add(new CursorGraphics(cursor, gameContext));
+gameGraphics.add(new SnekGraphics(snek, gameContext));
+gameGraphics.add(new PelletGraphics(pellet, gameContext));
 
-const uiGraphics = new GraphicsComposite(uiCanvas);
-uiGraphics.add(ui);
+const uiGraphics = new Composite();
+uiGraphics.add(new UiGraphics(ui, uiContext));
 
-const graphics = new GraphicsComposite();
+const graphics = new Composite();
 graphics.add(gameGraphics);
 graphics.add(uiGraphics);
 
-document.addEventListener("pointermove", (e) => {
-  e.currentTarget;
-  const point = {
-    x: e.x - gameCanvas.offsetLeft,
-    y: e.y - gameCanvas.offsetTop,
-  };
-  cursor.add(point, e.timeStamp);
-});
+document.addEventListener("pointermove", cursor.moveHandler);
 
-let draw = () => {
+function draw() {
+  gameContext.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+  uiContext.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
+
   graphics.draw();
-  graphics.reqId = requestAnimationFrame(draw);
-};
+  requestAnimationFrame(draw);
+}
 draw();
