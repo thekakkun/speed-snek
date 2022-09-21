@@ -136,11 +136,13 @@ class GameObject extends GraphicsComponent {
 
 export class Cursor extends GameObject {
   path: Path;
+  timeStamp: number[];
   target!: HTMLCanvasElement; // Should come from GraphicsComposite
 
   constructor() {
     super();
     this.path = [];
+    this.timeStamp = [];
   }
 
   public draw() {
@@ -161,23 +163,31 @@ export class Cursor extends GameObject {
     }
   }
 
-  public add(point: Point) {
+  public add(point: Point, timeStamp: number) {
     this.path.unshift(point);
+    this.timeStamp.unshift(timeStamp);
     this.mediator.notify(["pointermove", this]);
   }
 
   public trim(ix: number) {
     this.path.splice(ix);
+    this.timeStamp.splice(ix);
   }
 
-  public getSpeed(window = 50) {
+  public getSpeed(window = 6) {
     window = Math.min(window, this.path.length - 1);
-    let travelled = 0;
-    for (let i = 0; i < window; i++) {
-      travelled += dist(this.path[i], this.path[i + 1]);
+    if (window < 2) {
+      return 0;
     }
 
-    return travelled / window;
+    let travelled = 0;
+    let time = 0;
+    for (let i = 0; i < window; i++) {
+      travelled += dist(this.path[i], this.path[i + 1]);
+      time += this.timeStamp[i] - this.timeStamp[i + 1];
+    }
+
+    return travelled / time;
   }
 }
 
@@ -342,14 +352,14 @@ export class Ui extends GameObject {
   speed: number;
   smoothSpeed: number;
 
-  constructor(score = 0, speedLimit = 0, maxSpeed = 80) {
+  constructor(score = 0, speedLimit = 0, maxSpeed = 10) {
     super();
 
     this.score = score;
     this.speedLimit = speedLimit;
     this.maxSpeed = maxSpeed;
-    this.speed = maxSpeed;
-    this.smoothSpeed = maxSpeed;
+    this.speed = speedLimit;
+    this.smoothSpeed = speedLimit;
   }
 
   draw() {
@@ -377,20 +387,20 @@ export class Ui extends GameObject {
 
   update() {
     this.score += 1;
-    this.speedLimit += 1;
+    this.speedLimit += .02;
   }
 
   setSpeed(cursor: Cursor) {
-    let currentSpeed = cursor.getSpeed();
-    this.smoothSpeed < currentSpeed ? this.smoothSpeed++ : this.smoothSpeed--;
-
-    if (this.smoothSpeed < this.speedLimit) {
-      this.mediator.notify(["tooslow", this]);
+    const alpha = 0.1;
+    this.speed = cursor.getSpeed();
+    if (this.speed !== NaN) {
+      this.smoothSpeed = alpha * this.speed + (1 - alpha) * this.smoothSpeed;
     }
+    console.log(this.smoothSpeed);
   }
 
   gameOver(reason: string) {
-    alert(`Game Over!\n${reason}\nYour score: ${this.score}`);
-    location.reload();
+    // alert(`Game Over!\n${reason}\nYour score: ${this.score}`);
+    // location.reload();
   }
 }

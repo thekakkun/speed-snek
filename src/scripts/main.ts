@@ -34,7 +34,7 @@ document.addEventListener("pointermove", (e) => {
     x: e.x - gameCanvas.offsetLeft,
     y: e.y - gameCanvas.offsetTop,
   };
-  cursor.add(point);
+  cursor.add(point, e.timeStamp);
 });
 
 let draw = () => {
