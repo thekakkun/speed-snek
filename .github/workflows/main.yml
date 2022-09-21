@@ -29,13 +29,13 @@ jobs:
         with:
           node-version: lts/*
           
-      - name: Install packages
-        run: npm ci
-        
-      - name: Build
-        run: npm run build
+      - name: Install & build packages
+        run: |
+          npm ci
+          npm run build
+
         
       - name: Deploy
-        uses: actions/deploy-pages@v1.2.0
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          artifact_name: dist
+          folder: dist
