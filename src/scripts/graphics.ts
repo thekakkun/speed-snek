@@ -105,32 +105,71 @@ export class PelletGraphics extends GraphicsComponent<Pellet> {
   }
 }
 
-export class UiGraphics extends GraphicsComponent<SpeedSnek> {
+export class SpeedGraphics extends GraphicsComponent<SpeedSnek> {
   constructor(data: SpeedSnek, context: CanvasRenderingContext2D) {
     super(data, context);
   }
 
   draw() {
-    const needleLoc = this.scaleX(this.data.smoothSpeed);
+    const padding = 10;
+    const meterStart = {
+      x: 160,
+      y: padding,
+    };
+    const meterSize = {
+      x: this.context.canvas.clientWidth - meterStart.x,
+      y: this.context.canvas.clientHeight - padding * 2,
+    };
+
+    // Speed meter background
+    this.context.fillStyle = "#eee";
+    this.context.fillRect(meterStart.x, meterStart.y, meterSize.x, meterSize.y);
 
     // Speed limit line
-    this.context.strokeStyle = "orangeRed";
-    this.context.lineWidth = 5;
-    this.context.beginPath();
-    this.context.moveTo(this.scaleX(this.data.speedLimit), 0);
-    this.context.lineTo(this.scaleX(this.data.speedLimit), 50);
-    this.context.stroke();
+    this.context.fillStyle = "orangeRed";
+    this.context.fillRect(
+      meterStart.x,
+      meterStart.y,
+      (meterSize.x * this.data.speedLimit) / this.data.maxSpeed,
+      meterSize.y
+    );
 
     // Speedometer needle
     this.context.fillStyle = "green";
     this.context.beginPath();
-    this.context.moveTo(needleLoc, 50);
-    this.context.lineTo(needleLoc - 5, 0);
-    this.context.lineTo(needleLoc + 5, 0);
+    this.context.moveTo(
+      (meterSize.x * this.data.smoothSpeed) / this.data.maxSpeed - 5 + meterStart.x,
+      meterStart.y + meterSize.y
+    );
+    this.context.lineTo(
+      (meterSize.x * this.data.smoothSpeed) / this.data.maxSpeed + 5 + meterStart.x,
+      meterStart.y + meterSize.y
+    );
+    this.context.lineTo(
+      (meterSize.x * this.data.smoothSpeed) / this.data.maxSpeed + 1 + meterStart.x,
+      meterStart.y + 10
+    );
+    this.context.lineTo(
+      (meterSize.x * this.data.smoothSpeed) / this.data.maxSpeed - 1 + meterStart.x,
+      meterStart.y + 10
+    );
     this.context.fill();
   }
 
   scaleX(value: number) {
     return (this.context.canvas.width * value) / this.data.maxSpeed;
+  }
+}
+
+export class ScoreGraphics extends GraphicsComponent<SpeedSnek> {
+  constructor(data: SpeedSnek, context: CanvasRenderingContext2D) {
+    super(data, context);
+  }
+
+  draw() {
+    this.context.font = "25px monospace";
+    this.context.fillStyle = "black";
+    this.context.fillText(`Score: ${this.data.score}`, 0, 30);
+    this.context.fillText(` Best: ${this.data.score}`, 0, 60);
   }
 }

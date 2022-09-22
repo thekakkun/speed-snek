@@ -2,8 +2,9 @@ import {
   Composite,
   CursorGraphics,
   PelletGraphics,
+  ScoreGraphics,
   SnekGraphics,
-  UiGraphics,
+  SpeedGraphics,
 } from "./graphics";
 import { ConcreteMediator, Cursor, Snek, Pellet, SpeedSnek } from "./model";
 
@@ -47,7 +48,8 @@ gameGraphics.add(new SnekGraphics(snek, gameContext));
 gameGraphics.add(new PelletGraphics(pellet, gameContext));
 
 const uiGraphics = new Composite();
-uiGraphics.add(new UiGraphics(speedSnek, uiContext));
+uiGraphics.add(new SpeedGraphics(speedSnek, uiContext));
+uiGraphics.add(new ScoreGraphics(speedSnek, uiContext));
 
 const graphics = new Composite();
 graphics.add(gameGraphics);
