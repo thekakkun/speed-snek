@@ -148,7 +148,7 @@ export class SpeedSnek extends Component {
 
     this.score = score;
     const maxScore = localStorage.getItem("maxScore");
-    this.maxScore = this.maxScore ? Number(maxScore) : 0;
+    this.maxScore = maxScore ? Number(maxScore) : 0;
     this.speedLimit = speedLimit;
     this.speedIncrease = speedIncrease;
     this.maxSpeed = maxSpeed;
@@ -183,7 +183,7 @@ export class SpeedSnek extends Component {
       hitwall: "You crashed into a wall!",
       tooslow: "You were too slow!",
     };
-    
+
     localStorage.setItem("maxScore", String(this.maxScore));
 
     if (process.env.NODE_ENV === "production") {
