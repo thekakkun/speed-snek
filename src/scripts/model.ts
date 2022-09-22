@@ -99,9 +99,9 @@ export class ConcreteMediator implements Mediator {
     // // snek vs wall collisions
     if (
       snekHead.x - 1 <= 0 ||
-      this.cursor.target.width - 1 <= snekHead.x ||
+      this.cursor.target.clientWidth - 1 <= snekHead.x ||
       snekHead.y - 1 <= 0 ||
-      this.cursor.target.height - 1 <= snekHead.y
+      this.cursor.target.clientHeight - 1 <= snekHead.y
     ) {
       this.notify(["hitwall", this]);
     }
@@ -289,7 +289,7 @@ export class Pellet extends Component {
   loc: Point;
   r: number;
 
-  constructor(target: HTMLCanvasElement, noGo: Path, r = 8) {
+  constructor(target: HTMLCanvasElement, noGo: Path, r = 15) {
     super();
 
     this.r = r;
@@ -309,8 +309,8 @@ export class Pellet extends Component {
     while (true) {
       locValid = true;
       loc = {
-        x: randomBetween(buffer, this.target.width - buffer),
-        y: randomBetween(buffer, this.target.height - buffer),
+        x: randomBetween(buffer, this.target.clientWidth - buffer),
+        y: randomBetween(buffer, this.target.clientHeight - buffer),
       };
 
       // Place is fine if there is no noGo
