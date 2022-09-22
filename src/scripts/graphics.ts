@@ -105,6 +105,19 @@ export class PelletGraphics extends GraphicsComponent<Pellet> {
   }
 }
 
+export class ScoreGraphics extends GraphicsComponent<SpeedSnek> {
+  constructor(data: SpeedSnek, context: CanvasRenderingContext2D) {
+    super(data, context);
+  }
+
+  draw() {
+    this.context.font = "25px monospace";
+    this.context.fillStyle = "black";
+    this.context.fillText(`Score: ${this.data.score}`, 0, 30);
+    this.context.fillText(` Best: ${this.data.maxScore}`, 0, 60);
+  }
+}
+
 export class SpeedGraphics extends GraphicsComponent<SpeedSnek> {
   constructor(data: SpeedSnek, context: CanvasRenderingContext2D) {
     super(data, context);
@@ -135,22 +148,23 @@ export class SpeedGraphics extends GraphicsComponent<SpeedSnek> {
     );
 
     // Speedometer needle
+    const speed = Math.min(this.data.smoothSpeed, this.data.maxSpeed)
     this.context.fillStyle = "green";
     this.context.beginPath();
     this.context.moveTo(
-      (meterSize.x * this.data.smoothSpeed) / this.data.maxSpeed - 5 + meterStart.x,
+      (meterSize.x * speed) / this.data.maxSpeed - 5 + meterStart.x,
       meterStart.y + meterSize.y
     );
     this.context.lineTo(
-      (meterSize.x * this.data.smoothSpeed) / this.data.maxSpeed + 5 + meterStart.x,
+      (meterSize.x * speed) / this.data.maxSpeed + 5 + meterStart.x,
       meterStart.y + meterSize.y
     );
     this.context.lineTo(
-      (meterSize.x * this.data.smoothSpeed) / this.data.maxSpeed + 1 + meterStart.x,
+      (meterSize.x * speed) / this.data.maxSpeed + 1 + meterStart.x,
       meterStart.y + 10
     );
     this.context.lineTo(
-      (meterSize.x * this.data.smoothSpeed) / this.data.maxSpeed - 1 + meterStart.x,
+      (meterSize.x * speed) / this.data.maxSpeed - 1 + meterStart.x,
       meterStart.y + 10
     );
     this.context.fill();
@@ -161,15 +175,4 @@ export class SpeedGraphics extends GraphicsComponent<SpeedSnek> {
   }
 }
 
-export class ScoreGraphics extends GraphicsComponent<SpeedSnek> {
-  constructor(data: SpeedSnek, context: CanvasRenderingContext2D) {
-    super(data, context);
-  }
 
-  draw() {
-    this.context.font = "25px monospace";
-    this.context.fillStyle = "black";
-    this.context.fillText(`Score: ${this.data.score}`, 0, 30);
-    this.context.fillText(` Best: ${this.data.score}`, 0, 60);
-  }
-}
