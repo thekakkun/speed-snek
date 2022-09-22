@@ -124,7 +124,7 @@ export class SpeedSnek extends Component {
 
     localStorage.setItem("maxScore", String(this.maxScore));
 
-    if (process.env.NODE_ENV !== "production") {
+    if (process.env.NODE_ENV === "production") {
       document.removeEventListener("pointermove", cursor.moveHandler);
       alert(`Game Over!\n${message[reason]}\nYour score: ${this.score}`);
       location.reload();
