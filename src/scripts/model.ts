@@ -143,7 +143,7 @@ export class SpeedSnek extends Component {
   speed: number;
   smoothSpeed: number;
 
-  constructor(score = 0, speedLimit = 0, speedIncrease = 0.08, maxSpeed = 5) {
+  constructor(score = 0, speedLimit = 0, speedIncrease = 0.05, maxSpeed = 5) {
     super();
 
     this.score = score;

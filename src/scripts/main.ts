@@ -33,8 +33,8 @@ uiContext.scale(scale, scale);
 
 const cursor = new Cursor(gameCanvas);
 const snek = new Snek({
-  x: gameCanvas.width / 2,
-  y: gameCanvas.height / 2,
+  x: gameCanvas.clientWidth / 2,
+  y: gameCanvas.clientHeight / 2,
 });
 const pellet = new Pellet(gameCanvas, snek.path);
 const speedSnek = new SpeedSnek();
