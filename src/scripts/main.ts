@@ -48,7 +48,7 @@ gameGraphics.add(new SnekGraphics(snek, gameContext));
 gameGraphics.add(new PelletGraphics(pellet, gameContext));
 
 const uiGraphics = new Composite();
-uiGraphics.add(new SpeedGraphics(speedSnek, uiContext));
+uiGraphics.add(new SpeedGraphics(cursor, uiContext));
 uiGraphics.add(new ScoreGraphics(speedSnek, uiContext));
 
 const graphics = new Composite();

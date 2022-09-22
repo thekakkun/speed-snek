@@ -7,10 +7,10 @@ function randomBetween(min: number, max: number) {
 type Notification =
   | ["pointermove", Cursor]
   | ["trimpath", Snek, number]
-  | ["eatpellet", ConcreteMediator]
-  | ["hitself", ConcreteMediator]
-  | ["hitwall", ConcreteMediator]
-  | ["tooslow", SpeedSnek];
+  | ["eatpellet", Cursor]
+  | ["hitself", Cursor]
+  | ["hitwall", Cursor]
+  | ["tooslow", Cursor];
 
 interface Mediator {
   notify(notification: Notification): void;
@@ -40,13 +40,13 @@ export class ConcreteMediator implements Mediator {
   }
 
   public notify(notification: Notification): void {
-    const [event, sender, ...args] = notification;
+    const [event, sender] = notification;
 
     switch (event) {
       case "pointermove":
         this.snek.update(sender);
-        this.checkCollision();
-        this.speedSnek.updateSpeed(sender);
+        this.cursor.updateSpeed();
+        this.cursor.checkCollision(this.snek, this.pellet);
         break;
 
       case "trimpath":
@@ -57,65 +57,29 @@ export class ConcreteMediator implements Mediator {
       case "eatpellet":
         console.log("nom!");
         this.snek.grow();
-        this.speedSnek.update();
+        this.speedSnek.increaseScore();
+        this.cursor.increaseSpeed();
         this.pellet.place(this.snek.path);
         break;
 
       case "hitself":
         console.log("ouch!");
-        this.speedSnek.gameOver(event);
+        this.speedSnek.gameOver(...notification);
         break;
 
       case "hitwall":
         console.log("whoops!");
-        this.speedSnek.gameOver(event);
+        this.speedSnek.gameOver(...notification);
         break;
 
       case "tooslow":
         console.log("faster!");
-        this.speedSnek.gameOver(event);
+        this.speedSnek.gameOver(...notification);
         break;
 
       default:
         const _exhaustiveCheck: never = sender;
         return _exhaustiveCheck;
-    }
-  }
-
-  checkCollision() {
-    const snekHead = this.snek.path[0];
-
-    // snek vs pellet collisions
-    if (
-      2 <= this.cursor.path.length &&
-      intersection([this.cursor.path[0], this.cursor.path[1]], {
-        center: this.pellet.loc,
-        radius: this.pellet.r + this.snek.snekWidth / 2,
-      })
-    ) {
-      this.notify(["eatpellet", this]);
-    }
-
-    // // snek vs wall collisions
-    if (
-      snekHead.x - 1 <= 0 ||
-      this.cursor.target.clientWidth - 1 <= snekHead.x ||
-      snekHead.y - 1 <= 0 ||
-      this.cursor.target.clientHeight - 1 <= snekHead.y
-    ) {
-      this.notify(["hitwall", this]);
-    }
-
-    // snek vs snek collisions
-    for (let i = 2; i < this.snek.path.length - 1; i++) {
-      if (
-        intersection(
-          [this.snek.path[0], this.snek.path[1]],
-          [this.snek.path[i], this.snek.path[i + 1]]
-        )
-      ) {
-        this.notify(["hitself", this]);
-      }
     }
   }
 }
@@ -137,47 +101,21 @@ abstract class Component {
 export class SpeedSnek extends Component {
   score: number;
   maxScore: number;
-  speedLimit: number;
-  speedIncrease: number;
-  maxSpeed: number;
-  speed: number;
-  smoothSpeed: number;
 
-  constructor(score = 0, speedLimit = 0, speedIncrease = 0.05, maxSpeed = 5) {
+  constructor(score = 0) {
     super();
 
     this.score = score;
     const maxScore = localStorage.getItem("maxScore");
     this.maxScore = maxScore ? Number(maxScore) : 0;
-    this.speedLimit = speedLimit;
-    this.speedIncrease = speedIncrease;
-    this.maxSpeed = maxSpeed;
-    this.speed = speedLimit;
-    this.smoothSpeed = speedLimit;
   }
 
-  update() {
+  increaseScore() {
     this.score += 1;
     this.maxScore = Math.max(this.maxScore, this.score);
-    this.speedLimit = Math.min(
-      this.speedLimit + this.speedIncrease,
-      this.maxSpeed
-    );
   }
 
-  updateSpeed(cursor: Cursor) {
-    const alpha = 0.1;
-    this.speed = cursor.getSpeed();
-    if (this.speed !== NaN) {
-      this.smoothSpeed = alpha * this.speed + (1 - alpha) * this.smoothSpeed;
-    }
-
-    if (this.smoothSpeed < this.speedLimit) {
-      this.mediator.notify(["tooslow", this]);
-    }
-  }
-
-  gameOver(reason: Notification[0]) {
+  gameOver(reason: Notification[0], cursor: Cursor) {
     const message = {
       hitself: "You crashed into yourself!",
       hitwall: "You crashed into a wall!",
@@ -186,7 +124,8 @@ export class SpeedSnek extends Component {
 
     localStorage.setItem("maxScore", String(this.maxScore));
 
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV !== "production") {
+      document.removeEventListener("pointermove", cursor.moveHandler);
       alert(`Game Over!\n${message[reason]}\nYour score: ${this.score}`);
       location.reload();
     }
@@ -194,15 +133,25 @@ export class SpeedSnek extends Component {
 }
 
 export class Cursor extends Component {
+  target: HTMLCanvasElement;
   path: Path;
   timeStamp: number[];
-  target: HTMLCanvasElement;
+  speed: number;
+  smoothSpeed: number;
+  speedLimit: number;
+  speedIncrease: number;
+  maxSpeed: number;
 
   constructor(target: HTMLCanvasElement) {
     super();
+    this.target = target;
     this.path = [];
     this.timeStamp = [];
-    this.target = target;
+    this.speed = 0;
+    this.smoothSpeed = 0;
+    this.speedLimit = 0;
+    this.speedIncrease = 0.05;
+    this.maxSpeed = 5;
     this.moveHandler = this.moveHandler.bind(this);
   }
 
@@ -220,6 +169,60 @@ export class Cursor extends Component {
   public trim(ix: number) {
     this.path.splice(ix);
     this.timeStamp.splice(ix);
+  }
+
+  updateSpeed() {
+    const alpha = 0.1;
+    this.speed = this.getSpeed();
+    if (this.speed !== NaN) {
+      this.smoothSpeed = alpha * this.speed + (1 - alpha) * this.smoothSpeed;
+    }
+
+    if (this.smoothSpeed < this.speedLimit) {
+      this.mediator.notify(["tooslow", this]);
+    }
+  }
+
+  increaseSpeed() {
+    this.speedLimit = Math.min(
+      this.speedLimit + this.speedIncrease,
+      this.maxSpeed
+    );
+  }
+
+  checkCollision(snek: Snek, pellet: Pellet) {
+    // snek vs pellet collisions
+    if (
+      2 <= this.path.length &&
+      intersection([this.path[0], this.path[1]], {
+        center: pellet.loc,
+        radius: pellet.r + snek.snekWidth / 2,
+      })
+    ) {
+      this.mediator.notify(["eatpellet", this]);
+    }
+
+    // // snek vs wall collisions
+    if (
+      this.path[0].x - 1 <= 0 ||
+      this.target.clientWidth - 1 <= this.path[0].x ||
+      this.path[0].y - 1 <= 0 ||
+      this.target.clientHeight - 1 <= this.path[0].y
+    ) {
+      this.mediator.notify(["hitwall", this]);
+    }
+
+    // snek vs snek collisions
+    for (let i = 2; i < snek.path.length - 1; i++) {
+      if (
+        intersection(
+          [snek.path[0], snek.path[1]],
+          [snek.path[i], snek.path[i + 1]]
+        )
+      ) {
+        this.mediator.notify(["hitself", this]);
+      }
+    }
   }
 
   public getSpeed(window = 6) {
