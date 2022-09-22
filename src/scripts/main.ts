@@ -2,15 +2,34 @@ import {
   Composite,
   CursorGraphics,
   PelletGraphics,
+  ScoreGraphics,
   SnekGraphics,
-  UiGraphics,
+  SpeedGraphics,
 } from "./graphics";
 import { ConcreteMediator, Cursor, Snek, Pellet, SpeedSnek } from "./model";
 
+const width = 512;
+const gameHeight = 688;
+const uiHeight = 80;
+
 const gameCanvas = document.getElementById("game") as HTMLCanvasElement;
-const gameContext = gameCanvas.getContext("2d") as CanvasRenderingContext2D;
 const uiCanvas = document.getElementById("ui") as HTMLCanvasElement;
+const gameContext = gameCanvas.getContext("2d") as CanvasRenderingContext2D;
 const uiContext = uiCanvas.getContext("2d") as CanvasRenderingContext2D;
+
+gameCanvas.style.width = `${width}px`;
+gameCanvas.style.height = `${gameHeight}px`;
+uiCanvas.style.width = `${width}px`;
+uiCanvas.style.height = `${uiHeight}px`;
+
+const scale = window.devicePixelRatio;
+gameCanvas.width = Math.floor(width * scale);
+gameCanvas.height = Math.floor(gameHeight * scale);
+uiCanvas.width = Math.floor(width * scale);
+uiCanvas.height = Math.floor(uiHeight * scale);
+
+gameContext.scale(scale, scale);
+uiContext.scale(scale, scale);
 
 const cursor = new Cursor(gameCanvas);
 const snek = new Snek({
@@ -29,7 +48,8 @@ gameGraphics.add(new SnekGraphics(snek, gameContext));
 gameGraphics.add(new PelletGraphics(pellet, gameContext));
 
 const uiGraphics = new Composite();
-uiGraphics.add(new UiGraphics(speedSnek, uiContext));
+uiGraphics.add(new SpeedGraphics(speedSnek, uiContext));
+uiGraphics.add(new ScoreGraphics(speedSnek, uiContext));
 
 const graphics = new Composite();
 graphics.add(gameGraphics);

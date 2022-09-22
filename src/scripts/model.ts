@@ -99,9 +99,9 @@ export class ConcreteMediator implements Mediator {
     // // snek vs wall collisions
     if (
       snekHead.x - 1 <= 0 ||
-      this.cursor.target.width - 1 <= snekHead.x ||
+      this.cursor.target.clientWidth - 1 <= snekHead.x ||
       snekHead.y - 1 <= 0 ||
-      this.cursor.target.height - 1 <= snekHead.y
+      this.cursor.target.clientHeight - 1 <= snekHead.y
     ) {
       this.notify(["hitwall", this]);
     }
@@ -136,16 +136,21 @@ abstract class Component {
 
 export class SpeedSnek extends Component {
   score: number;
+  maxScore: number;
   speedLimit: number;
+  speedIncrease: number;
   maxSpeed: number;
   speed: number;
   smoothSpeed: number;
 
-  constructor(score = 0, speedLimit = 0, maxSpeed = 10) {
+  constructor(score = 0, speedLimit = 0, speedIncrease = 0.08, maxSpeed = 5) {
     super();
 
     this.score = score;
+    const maxScore = localStorage.getItem("maxScore");
+    this.maxScore = this.maxScore ? Number(maxScore) : 0;
     this.speedLimit = speedLimit;
+    this.speedIncrease = speedIncrease;
     this.maxSpeed = maxSpeed;
     this.speed = speedLimit;
     this.smoothSpeed = speedLimit;
@@ -153,7 +158,11 @@ export class SpeedSnek extends Component {
 
   update() {
     this.score += 1;
-    this.speedLimit += 0.1;
+    this.maxScore = Math.max(this.maxScore, this.score);
+    this.speedLimit = Math.min(
+      this.speedLimit + this.speedIncrease,
+      this.maxSpeed
+    );
   }
 
   updateSpeed(cursor: Cursor) {
@@ -174,6 +183,8 @@ export class SpeedSnek extends Component {
       hitwall: "You crashed into a wall!",
       tooslow: "You were too slow!",
     };
+    
+    localStorage.setItem("maxScore", String(this.maxScore));
 
     if (process.env.NODE_ENV === "production") {
       alert(`Game Over!\n${message[reason]}\nYour score: ${this.score}`);
@@ -289,7 +300,7 @@ export class Pellet extends Component {
   loc: Point;
   r: number;
 
-  constructor(target: HTMLCanvasElement, noGo: Path, r = 8) {
+  constructor(target: HTMLCanvasElement, noGo: Path, r = 15) {
     super();
 
     this.r = r;
@@ -309,8 +320,8 @@ export class Pellet extends Component {
     while (true) {
       locValid = true;
       loc = {
-        x: randomBetween(buffer, this.target.width - buffer),
-        y: randomBetween(buffer, this.target.height - buffer),
+        x: randomBetween(buffer, this.target.clientWidth - buffer),
+        y: randomBetween(buffer, this.target.clientHeight - buffer),
       };
 
       // Place is fine if there is no noGo

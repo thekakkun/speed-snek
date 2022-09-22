@@ -2,9 +2,17 @@
   padding: 0;
   margin: 0;
 }
-canvas {
-  background: #eee;
-  display: block;
-  margin: 0 auto;
-  border: 2px grey solid;
+
+#speedSnek {
+  #ui {
+    display: block;
+    margin: 0 auto;
+  }
+
+  #game {
+    display: block;
+    margin: 0 auto;
+    border: 2px grey solid;
+    background-color: #eee;
+  }
 }
