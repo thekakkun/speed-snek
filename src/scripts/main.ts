@@ -33,8 +33,8 @@ uiContext.scale(scale, scale);
 
 const cursor = new Cursor(gameCanvas);
 const snek = new Snek({
-  x: gameCanvas.width / 2,
-  y: gameCanvas.height / 2,
+  x: gameCanvas.clientWidth / 2,
+  y: gameCanvas.clientHeight / 2,
 });
 const pellet = new Pellet(gameCanvas, snek.path);
 const speedSnek = new SpeedSnek();
@@ -48,7 +48,7 @@ gameGraphics.add(new SnekGraphics(snek, gameContext));
 gameGraphics.add(new PelletGraphics(pellet, gameContext));
 
 const uiGraphics = new Composite();
-uiGraphics.add(new SpeedGraphics(speedSnek, uiContext));
+uiGraphics.add(new SpeedGraphics(cursor, uiContext));
 uiGraphics.add(new ScoreGraphics(speedSnek, uiContext));
 
 const graphics = new Composite();

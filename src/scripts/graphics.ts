@@ -118,8 +118,8 @@ export class ScoreGraphics extends GraphicsComponent<SpeedSnek> {
   }
 }
 
-export class SpeedGraphics extends GraphicsComponent<SpeedSnek> {
-  constructor(data: SpeedSnek, context: CanvasRenderingContext2D) {
+export class SpeedGraphics extends GraphicsComponent<Cursor> {
+  constructor(data: Cursor, context: CanvasRenderingContext2D) {
     super(data, context);
   }
 
@@ -148,7 +148,7 @@ export class SpeedGraphics extends GraphicsComponent<SpeedSnek> {
     );
 
     // Speedometer needle
-    const speed = Math.min(this.data.smoothSpeed, this.data.maxSpeed)
+    const speed = Math.min(this.data.smoothSpeed, this.data.maxSpeed);
     this.context.fillStyle = "green";
     this.context.beginPath();
     this.context.moveTo(
@@ -174,5 +174,3 @@ export class SpeedGraphics extends GraphicsComponent<SpeedSnek> {
     return (this.context.canvas.width * value) / this.data.maxSpeed;
   }
 }
-
-
