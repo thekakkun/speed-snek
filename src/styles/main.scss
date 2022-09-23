@@ -4,6 +4,8 @@
 }
 
 #speedSnek {
+  touch-action: none;
+
   #ui {
     display: block;
     margin: 0 auto;
