@@ -1,5 +1,30 @@
 import { Point } from "./geometry";
-import { Cursor, Snek, Pellet, SpeedSnek } from "./model";
+import { Cursor, Snek, Pellet, Model } from "./model";
+
+export class Canvas {
+  height: number;
+  width: number;
+  element: HTMLCanvasElement;
+  context: CanvasRenderingContext2D;
+
+  constructor(id: string, width: number, height: number) {
+    this.width = width;
+    this.height = height;
+
+    this.element = document.getElementById(id) as HTMLCanvasElement;
+    this.element.style.width = `${width}px`;
+    this.element.style.height = `${height}px`;
+
+    // Scale for high resolution displays
+    const dpr = window.devicePixelRatio;
+    this.element.width = Math.floor(width * dpr);
+    this.element.height = Math.floor(height * dpr);
+
+    // scale the output
+    this.context = this.element.getContext("2d") as CanvasRenderingContext2D;
+    this.context.scale(dpr, dpr);
+  }
+}
 
 abstract class Component {
   protected parent!: Component | null;
@@ -105,8 +130,8 @@ export class PelletGraphics extends GraphicsComponent<Pellet> {
   }
 }
 
-export class ScoreGraphics extends GraphicsComponent<SpeedSnek> {
-  constructor(data: SpeedSnek, context: CanvasRenderingContext2D) {
+export class ScoreGraphics extends GraphicsComponent<Model> {
+  constructor(data: Model, context: CanvasRenderingContext2D) {
     super(data, context);
   }
 

@@ -17,7 +17,7 @@ interface Mediator {
 }
 
 // events are sent here, and the mediator passes them on to the correct handler.
-export class SpeedSnek implements Mediator {
+export class Model implements Mediator {
   public score: number;
   public maxScore: number;
 
@@ -117,14 +117,6 @@ abstract class Component {
   public setMediator(mediator: Mediator): void {
     this.mediator = mediator;
   }
-}
-
-export class GameState extends Component {
-  constructor() {
-    super();
-  }
-
-  init() {}
 }
 
 export class Cursor extends Component {

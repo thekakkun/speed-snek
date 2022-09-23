@@ -1,64 +1,51 @@
 import {
+  Canvas,
   Composite,
   CursorGraphics,
   PelletGraphics,
   ScoreGraphics,
   SnekGraphics,
   SpeedGraphics,
-} from "./graphics";
-import { SpeedSnek, Cursor, Snek, Pellet } from "./model";
+} from "./view";
+import { Model, Cursor, Snek, Pellet } from "./model";
 
-const width = 512;
-const gameHeight = 688;
-const uiHeight = 80;
+let speedSnek: Model;
+let cursor: Cursor;
+let snek: Snek;
+let pellet: Pellet;
 
-const gameCanvas = document.getElementById("game") as HTMLCanvasElement;
-const uiCanvas = document.getElementById("ui") as HTMLCanvasElement;
-const gameContext = gameCanvas.getContext("2d") as CanvasRenderingContext2D;
-const uiContext = uiCanvas.getContext("2d") as CanvasRenderingContext2D;
+let graphics: Composite;
 
-gameCanvas.style.width = `${width}px`;
-gameCanvas.style.height = `${gameHeight}px`;
-uiCanvas.style.width = `${width}px`;
-uiCanvas.style.height = `${uiHeight}px`;
+const uiCanvas = new Canvas("ui", 512, 80);
+const gameCanvas = new Canvas("game", 512, 688);
 
-const scale = window.devicePixelRatio;
-gameCanvas.width = Math.floor(width * scale);
-gameCanvas.height = Math.floor(gameHeight * scale);
-uiCanvas.width = Math.floor(width * scale);
-uiCanvas.height = Math.floor(uiHeight * scale);
-
-gameContext.scale(scale, scale);
-uiContext.scale(scale, scale);
-
-const cursor = new Cursor(gameCanvas);
-const snek = new Snek({
-  x: gameCanvas.clientWidth / 2,
-  y: gameCanvas.clientHeight / 2,
+cursor = new Cursor(gameCanvas.element);
+snek = new Snek({
+  x: gameCanvas.width / 2,
+  y: gameCanvas.height / 2,
 });
-const pellet = new Pellet(gameCanvas, snek.path);
-const speedSnek = new SpeedSnek(cursor, snek, pellet);
+pellet = new Pellet(gameCanvas.element, snek.path);
+speedSnek = new Model(cursor, snek, pellet);
+document.addEventListener("pointermove", cursor.moveHandler);
 
 const gameGraphics = new Composite();
 if (process.env.NODE_ENV === "development") {
-  gameGraphics.add(new CursorGraphics(cursor, gameContext));
+  gameGraphics.add(new CursorGraphics(cursor, gameCanvas.context));
 }
-gameGraphics.add(new SnekGraphics(snek, gameContext));
-gameGraphics.add(new PelletGraphics(pellet, gameContext));
+gameGraphics.add(new SnekGraphics(snek, gameCanvas.context));
+gameGraphics.add(new PelletGraphics(pellet, gameCanvas.context));
 
 const uiGraphics = new Composite();
-uiGraphics.add(new SpeedGraphics(cursor, uiContext));
-uiGraphics.add(new ScoreGraphics(speedSnek, uiContext));
+uiGraphics.add(new SpeedGraphics(cursor, uiCanvas.context));
+uiGraphics.add(new ScoreGraphics(speedSnek, uiCanvas.context));
 
-const graphics = new Composite();
+graphics = new Composite();
 graphics.add(gameGraphics);
 graphics.add(uiGraphics);
 
-document.addEventListener("pointermove", cursor.moveHandler);
-
 function draw() {
-  gameContext.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
-  uiContext.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
+  gameCanvas.context.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+  uiCanvas.context.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
 
   graphics.draw();
   requestAnimationFrame(draw);
