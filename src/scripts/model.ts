@@ -19,7 +19,7 @@ interface Mediator {
 // events are sent here, and the mediator passes them on to the correct handler.
 export class Model implements Mediator {
   public score: number;
-  public maxScore: number;
+  public bestScore: number;
 
   private cursor: Cursor;
   private snek: Snek;
@@ -27,8 +27,8 @@ export class Model implements Mediator {
 
   constructor(cursor: Cursor, snek: Snek, pellet: Pellet) {
     this.score = 0;
-    const maxScore = localStorage.getItem("maxScore");
-    this.maxScore = maxScore ? Number(maxScore) : 0;
+    const bestScore = localStorage.getItem("bestScore");
+    this.bestScore = bestScore ? Number(bestScore) : 0;
 
     this.cursor = cursor;
     this.cursor.setMediator(this);
@@ -85,7 +85,7 @@ export class Model implements Mediator {
 
   increaseScore() {
     this.score += 1;
-    this.maxScore = Math.max(this.maxScore, this.score);
+    this.bestScore = Math.max(this.bestScore, this.score);
   }
 
   gameOver(reason: Notification[0], cursor: Cursor) {
@@ -95,7 +95,7 @@ export class Model implements Mediator {
       tooslow: "You were too slow!",
     };
 
-    localStorage.setItem("maxScore", String(this.maxScore));
+    localStorage.setItem("bestScore", String(this.bestScore));
 
     if (process.env.NODE_ENV === "production") {
       document.removeEventListener("pointermove", cursor.moveHandler);

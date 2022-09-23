@@ -37,7 +37,7 @@ abstract class Component {
     return this.parent;
   }
 
-  public abstract draw(): void;
+  public abstract render(): void;
 }
 
 export class Composite extends Component {
@@ -55,119 +55,153 @@ export class Composite extends Component {
     component.setParent(null);
   }
 
-  public draw() {
+  public render() {
     for (const child of this.children) {
-      child.draw();
+      child.render();
     }
   }
 }
 
 abstract class GraphicsComponent<Type> extends Component {
   public data: Type;
-  public context: CanvasRenderingContext2D;
+  public target: CanvasRenderingContext2D | HTMLElement;
 
-  constructor(data: Type, context: CanvasRenderingContext2D) {
+  constructor(data: Type, context: CanvasRenderingContext2D | HTMLElement) {
     super();
     this.data = data;
-    this.context = context;
+    this.target = context;
   }
 }
 
 export class CursorGraphics extends GraphicsComponent<Cursor> {
-  constructor(data: Cursor, context: CanvasRenderingContext2D) {
-    super(data, context);
+  target: CanvasRenderingContext2D;
+
+  constructor(data: Cursor, target: CanvasRenderingContext2D) {
+    super(data, target);
   }
 
-  draw() {
+  render() {
     if (this.data.path.length !== 0) {
-      this.context.strokeStyle = "red";
-      this.context.lineWidth = 1;
-      this.context.beginPath();
-      this.context.moveTo(this.data.path[0].x, this.data.path[0].y);
+      this.target.strokeStyle = "red";
+      this.target.lineWidth = 1;
+      this.target.beginPath();
+      this.target.moveTo(this.data.path[0].x, this.data.path[0].y);
       this.data.path.forEach((point: Point) => {
-        this.context.lineTo(point.x, point.y);
+        this.target.lineTo(point.x, point.y);
       });
-      this.context.stroke();
+      this.target.stroke();
     }
   }
 }
 
 export class SnekGraphics extends GraphicsComponent<Snek> {
-  constructor(data: Snek, context: CanvasRenderingContext2D) {
-    super(data, context);
+  target: CanvasRenderingContext2D;
+
+  constructor(data: Snek, target: CanvasRenderingContext2D) {
+    super(data, target);
   }
 
-  draw() {
-    this.context.strokeStyle = "green";
-    this.context.lineCap = "round";
-    this.context.lineJoin = "round";
-    this.context.lineWidth = this.data.snekWidth;
-    this.context.beginPath();
-    this.context.moveTo(this.data.path[0].x, this.data.path[0].y);
+  render() {
+    this.target.strokeStyle = "green";
+    this.target.lineCap = "round";
+    this.target.lineJoin = "round";
+    this.target.lineWidth = this.data.snekWidth;
+    this.target.beginPath();
+    this.target.moveTo(this.data.path[0].x, this.data.path[0].y);
     this.data.path.forEach((point: Point) => {
-      this.context.lineTo(point.x, point.y);
+      this.target.lineTo(point.x, point.y);
     });
-    this.context.stroke();
+    this.target.stroke();
   }
 }
 
 export class PelletGraphics extends GraphicsComponent<Pellet> {
-  constructor(data: Pellet, context: CanvasRenderingContext2D) {
-    super(data, context);
+  target: CanvasRenderingContext2D;
+
+  constructor(data: Pellet, target: CanvasRenderingContext2D) {
+    super(data, target);
   }
 
-  draw() {
+  render() {
     if (this.data.loc) {
-      this.context.fillStyle = "blue";
-      this.context.beginPath();
-      this.context.arc(
+      this.target.fillStyle = "blue";
+      this.target.beginPath();
+      this.target.arc(
         this.data.loc.x,
         this.data.loc.y,
         this.data.r,
         0,
         Math.PI * 2
       );
-      this.context.fill();
+      this.target.fill();
     }
   }
 }
 
 export class ScoreGraphics extends GraphicsComponent<Model> {
-  constructor(data: Model, context: CanvasRenderingContext2D) {
-    super(data, context);
+  target: CanvasRenderingContext2D;
+
+  constructor(data: Model, target: CanvasRenderingContext2D) {
+    super(data, target);
   }
 
-  draw() {
-    this.context.font = "25px monospace";
-    this.context.fillStyle = "black";
-    this.context.fillText(`Score: ${this.data.score}`, 0, 30);
-    this.context.fillText(` Best: ${this.data.maxScore}`, 0, 60);
+  render() {
+    this.target.font = "25px monospace";
+    this.target.fillStyle = "black";
+    this.target.fillText(`Score: ${this.data.score}`, 0, 30);
+    this.target.fillText(` Best: ${this.data.bestScore}`, 0, 60);
+  }
+}
+
+export class CurrentScore extends GraphicsComponent<Model> {
+  target: HTMLElement;
+
+  constructor(data: Model, target: HTMLElement) {
+    super(data, target);
+  }
+
+  render() {
+    this.target.innerText = `Score: ${String(this.data.score)}`;
+  }
+}
+
+export class BestScore extends GraphicsComponent<Model> {
+  target: HTMLElement;
+
+  constructor(data: Model, target: HTMLElement) {
+    super(data, target);
+  }
+
+  render() {
+    this.target.innerText = `Best: ${String(this.data.bestScore)}`;
   }
 }
 
 export class SpeedGraphics extends GraphicsComponent<Cursor> {
-  constructor(data: Cursor, context: CanvasRenderingContext2D) {
-    super(data, context);
+  target: CanvasRenderingContext2D;
+
+  constructor(data: Cursor, target: CanvasRenderingContext2D) {
+    super(data, target);
   }
 
-  draw() {
+  render() {
     const padding = 10;
     const meterStart = {
       x: 160,
       y: padding,
     };
     const meterSize = {
-      x: this.context.canvas.clientWidth - meterStart.x,
-      y: this.context.canvas.clientHeight - padding * 2,
+      x: this.target.canvas.clientWidth - meterStart.x,
+      y: this.target.canvas.clientHeight - padding * 2,
     };
 
     // Speedometer background
-    this.context.fillStyle = "#eee";
-    this.context.fillRect(meterStart.x, meterStart.y, meterSize.x, meterSize.y);
+    this.target.fillStyle = "#eee";
+    this.target.fillRect(meterStart.x, meterStart.y, meterSize.x, meterSize.y);
 
     // Speed limit
-    this.context.fillStyle = "orangeRed";
-    this.context.fillRect(
+    this.target.fillStyle = "orangeRed";
+    this.target.fillRect(
       meterStart.x,
       meterStart.y,
       (meterSize.x * this.data.speedLimit) / this.data.maxSpeed,
@@ -176,24 +210,24 @@ export class SpeedGraphics extends GraphicsComponent<Cursor> {
 
     // Speedometer needle
     const speed = Math.min(this.data.smoothSpeed, this.data.maxSpeed);
-    this.context.fillStyle = "green";
-    this.context.beginPath();
-    this.context.moveTo(
+    this.target.fillStyle = "green";
+    this.target.beginPath();
+    this.target.moveTo(
       (meterSize.x * speed) / this.data.maxSpeed - 5 + meterStart.x,
       meterStart.y + meterSize.y
     );
-    this.context.lineTo(
+    this.target.lineTo(
       (meterSize.x * speed) / this.data.maxSpeed + 5 + meterStart.x,
       meterStart.y + meterSize.y
     );
-    this.context.lineTo(
+    this.target.lineTo(
       (meterSize.x * speed) / this.data.maxSpeed + 1 + meterStart.x,
       meterStart.y + 10
     );
-    this.context.lineTo(
+    this.target.lineTo(
       (meterSize.x * speed) / this.data.maxSpeed - 1 + meterStart.x,
       meterStart.y + 10
     );
-    this.context.fill();
+    this.target.fill();
   }
 }

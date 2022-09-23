@@ -1,6 +1,8 @@
 import {
+  BestScore,
   Canvas,
   Composite,
+  CurrentScore,
   CursorGraphics,
   PelletGraphics,
   ScoreGraphics,
@@ -9,7 +11,7 @@ import {
 } from "./view";
 import { Model, Cursor, Snek, Pellet } from "./model";
 
-let speedSnek: Model;
+let model: Model;
 let cursor: Cursor;
 let snek: Snek;
 let pellet: Pellet;
@@ -25,7 +27,7 @@ snek = new Snek({
   y: gameCanvas.height / 2,
 });
 pellet = new Pellet(gameCanvas.element, snek.path);
-speedSnek = new Model(cursor, snek, pellet);
+model = new Model(cursor, snek, pellet);
 // document.addEventListener("pointermove", cursor.moveHandler);
 
 const gameGraphics = new Composite();
@@ -37,20 +39,17 @@ gameGraphics.add(new PelletGraphics(pellet, gameCanvas.context));
 
 const uiGraphics = new Composite();
 uiGraphics.add(new SpeedGraphics(cursor, uiCanvas.context));
-uiGraphics.add(new ScoreGraphics(speedSnek, uiCanvas.context));
+uiGraphics.add(
+  new CurrentScore(model, document.querySelector(".ui__score") as HTMLElement)
+);
+uiGraphics.add(
+  new BestScore(model, document.querySelector(".ui__best") as HTMLElement)
+);
+uiGraphics.add(new ScoreGraphics(model, uiCanvas.context));
 
 graphics = new Composite();
 graphics.add(gameGraphics);
 graphics.add(uiGraphics);
-
-function draw() {
-  gameCanvas.context.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
-  uiCanvas.context.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
-
-  graphics.draw();
-  requestAnimationFrame(draw);
-}
-// draw();
 
 class SpeedSnek {
   constructor() {
@@ -73,9 +72,9 @@ class SpeedSnek {
   render() {
     gameCanvas.context.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
     uiCanvas.context.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
-    graphics.draw();
+    graphics.render();
   }
 }
 
-let foo = new SpeedSnek();
-foo.init();
+let speedSnek = new SpeedSnek();
+speedSnek.init();
