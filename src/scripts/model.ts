@@ -195,14 +195,16 @@ export class Cursor extends Component {
 
   public checkCollision(snek: Snek, pellet: Pellet) {
     // snek vs pellet collisions
-    if (
-      2 <= this.path.length &&
-      intersection([this.path[0], this.path[1]], {
-        center: pellet.loc,
-        radius: pellet.r + snek.snekWidth / 2,
-      })
-    ) {
-      this.mediator.notify(["eatpellet", this]);
+    if (pellet.loc) {
+      if (
+        2 <= this.path.length &&
+        intersection([this.path[0], this.path[1]], {
+          center: pellet.loc,
+          radius: pellet.r + snek.snekWidth / 2,
+        })
+      ) {
+        this.mediator.notify(["eatpellet", this]);
+      }
     }
 
     // // snek vs wall collisions
@@ -286,7 +288,7 @@ export class Snek extends Component {
 
 export class Pellet extends Component {
   target: HTMLCanvasElement;
-  loc: Point;
+  loc: Point | null;
   r: number;
 
   constructor(target: HTMLCanvasElement, noGo: Path) {

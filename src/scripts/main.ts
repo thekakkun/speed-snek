@@ -26,7 +26,7 @@ snek = new Snek({
 });
 pellet = new Pellet(gameCanvas.element, snek.path);
 speedSnek = new Model(cursor, snek, pellet);
-document.addEventListener("pointermove", cursor.moveHandler);
+// document.addEventListener("pointermove", cursor.moveHandler);
 
 const gameGraphics = new Composite();
 if (process.env.NODE_ENV === "development") {
@@ -50,4 +50,32 @@ function draw() {
   graphics.draw();
   requestAnimationFrame(draw);
 }
-draw();
+// draw();
+
+class SpeedSnek {
+  constructor() {
+    this.gameLoop = this.gameLoop.bind(this);
+  }
+
+  init() {
+    window.requestAnimationFrame(this.gameLoop);
+    document.addEventListener("pointermove", cursor.moveHandler);
+  }
+
+  gameLoop() {
+    this.render();
+    this.update();
+    requestAnimationFrame(this.gameLoop);
+  }
+
+  update() {}
+
+  render() {
+    gameCanvas.context.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+    uiCanvas.context.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
+    graphics.draw();
+  }
+}
+
+let foo = new SpeedSnek();
+foo.init();

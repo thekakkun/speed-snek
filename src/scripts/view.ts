@@ -117,16 +117,18 @@ export class PelletGraphics extends GraphicsComponent<Pellet> {
   }
 
   draw() {
-    this.context.fillStyle = "blue";
-    this.context.beginPath();
-    this.context.arc(
-      this.data.loc.x,
-      this.data.loc.y,
-      this.data.r,
-      0,
-      Math.PI * 2
-    );
-    this.context.fill();
+    if (this.data.loc) {
+      this.context.fillStyle = "blue";
+      this.context.beginPath();
+      this.context.arc(
+        this.data.loc.x,
+        this.data.loc.y,
+        this.data.r,
+        0,
+        Math.PI * 2
+      );
+      this.context.fill();
+    }
   }
 }
 
