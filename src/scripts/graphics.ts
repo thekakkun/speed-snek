@@ -134,11 +134,11 @@ export class SpeedGraphics extends GraphicsComponent<Cursor> {
       y: this.context.canvas.clientHeight - padding * 2,
     };
 
-    // Speed meter background
+    // Speedometer background
     this.context.fillStyle = "#eee";
     this.context.fillRect(meterStart.x, meterStart.y, meterSize.x, meterSize.y);
 
-    // Speed limit line
+    // Speed limit
     this.context.fillStyle = "orangeRed";
     this.context.fillRect(
       meterStart.x,
@@ -168,9 +168,5 @@ export class SpeedGraphics extends GraphicsComponent<Cursor> {
       meterStart.y + 10
     );
     this.context.fill();
-  }
-
-  scaleX(value: number) {
-    return (this.context.canvas.width * value) / this.data.maxSpeed;
   }
 }

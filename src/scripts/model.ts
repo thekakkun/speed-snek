@@ -17,20 +17,19 @@ interface Mediator {
 }
 
 // events are sent here, and the mediator passes them on to the correct handler.
-export class ConcreteMediator implements Mediator {
-  public speedSnek: SpeedSnek;
+export class SpeedSnek implements Mediator {
+  public score: number;
+  public maxScore: number;
+
   private cursor: Cursor;
   private snek: Snek;
   private pellet: Pellet;
 
-  constructor(
-    speedSnek: SpeedSnek,
-    cursor: Cursor,
-    snek: Snek,
-    pellet: Pellet
-  ) {
-    this.speedSnek = speedSnek;
-    this.speedSnek.setMediator(this);
+  constructor(cursor: Cursor, snek: Snek, pellet: Pellet) {
+    this.score = 0;
+    const maxScore = localStorage.getItem("maxScore");
+    this.maxScore = maxScore ? Number(maxScore) : 0;
+
     this.cursor = cursor;
     this.cursor.setMediator(this);
     this.snek = snek;
@@ -50,6 +49,7 @@ export class ConcreteMediator implements Mediator {
         break;
 
       case "trimpath":
+        // Only keep enough raw path data to add another snek segment
         const [, , ix] = notification;
         this.cursor.trim(ix);
         break;
@@ -57,57 +57,30 @@ export class ConcreteMediator implements Mediator {
       case "eatpellet":
         console.log("nom!");
         this.snek.grow();
-        this.speedSnek.increaseScore();
+        this.increaseScore();
         this.cursor.increaseSpeed();
         this.pellet.place(this.snek.path);
         break;
 
       case "hitself":
         console.log("ouch!");
-        this.speedSnek.gameOver(...notification);
+        this.gameOver(...notification);
         break;
 
       case "hitwall":
         console.log("whoops!");
-        this.speedSnek.gameOver(...notification);
+        this.gameOver(...notification);
         break;
 
       case "tooslow":
         console.log("faster!");
-        this.speedSnek.gameOver(...notification);
+        this.gameOver(...notification);
         break;
 
       default:
         const _exhaustiveCheck: never = sender;
         return _exhaustiveCheck;
     }
-  }
-}
-
-// Components contain some sort of logic and can reference their mediators
-// Things in the game that have data that need updating.
-abstract class Component {
-  protected mediator: Mediator;
-
-  constructor(mediator?: Mediator) {
-    this.mediator = mediator!;
-  }
-
-  public setMediator(mediator: Mediator): void {
-    this.mediator = mediator;
-  }
-}
-
-export class SpeedSnek extends Component {
-  score: number;
-  maxScore: number;
-
-  constructor(score = 0) {
-    super();
-
-    this.score = score;
-    const maxScore = localStorage.getItem("maxScore");
-    this.maxScore = maxScore ? Number(maxScore) : 0;
   }
 
   increaseScore() {
@@ -130,6 +103,28 @@ export class SpeedSnek extends Component {
       location.reload();
     }
   }
+}
+
+// Components contain some sort of logic and can reference their mediators
+// Things in the game that have data that need updating.
+abstract class Component {
+  protected mediator: Mediator;
+
+  constructor(mediator?: Mediator) {
+    this.mediator = mediator!;
+  }
+
+  public setMediator(mediator: Mediator): void {
+    this.mediator = mediator;
+  }
+}
+
+export class GameState extends Component {
+  constructor() {
+    super();
+  }
+
+  init() {}
 }
 
 export class Cursor extends Component {
@@ -171,7 +166,23 @@ export class Cursor extends Component {
     this.timeStamp.splice(ix);
   }
 
-  updateSpeed() {
+  public getSpeed(window = 6) {
+    window = Math.min(window, this.path.length - 1);
+    if (window < 2) {
+      return 0;
+    }
+
+    let travelled = 0;
+    let time = 0;
+    for (let i = 0; i < window; i++) {
+      travelled += dist(this.path[i], this.path[i + 1]);
+      time += this.timeStamp[i] - this.timeStamp[i + 1];
+    }
+
+    return travelled / time;
+  }
+
+  public updateSpeed() {
     const alpha = 0.1;
     this.speed = this.getSpeed();
     if (this.speed !== NaN) {
@@ -183,14 +194,14 @@ export class Cursor extends Component {
     }
   }
 
-  increaseSpeed() {
+  public increaseSpeed() {
     this.speedLimit = Math.min(
       this.speedLimit + this.speedIncrease,
       this.maxSpeed
     );
   }
 
-  checkCollision(snek: Snek, pellet: Pellet) {
+  public checkCollision(snek: Snek, pellet: Pellet) {
     // snek vs pellet collisions
     if (
       2 <= this.path.length &&
@@ -224,22 +235,6 @@ export class Cursor extends Component {
       }
     }
   }
-
-  public getSpeed(window = 6) {
-    window = Math.min(window, this.path.length - 1);
-    if (window < 2) {
-      return 0;
-    }
-
-    let travelled = 0;
-    let time = 0;
-    for (let i = 0; i < window; i++) {
-      travelled += dist(this.path[i], this.path[i + 1]);
-      time += this.timeStamp[i] - this.timeStamp[i + 1];
-    }
-
-    return travelled / time;
-  }
 }
 
 export class Snek extends Component {
@@ -248,22 +243,21 @@ export class Snek extends Component {
   path: Path;
   snekWidth: number;
 
-  constructor(startLoc: Point, segments = 4, segLength = 50, snekWidth = 10) {
+  constructor(startLoc: Point) {
     super();
+    this.segments = 4;
+    this.segLength = 50;
+    this.snekWidth = 10;
 
     this.path = [startLoc];
-    for (let i = 0; i < segments; i++) {
+    for (let i = 0; i < this.segments; i++) {
       const nextSeg = {
         x: this.path[i].x,
-        y: this.path[i].y + segLength,
+        y: this.path[i].y + this.segLength,
       };
 
       this.path.push(nextSeg);
     }
-
-    this.segments = segments;
-    this.segLength = segLength;
-    this.snekWidth = snekWidth;
   }
 
   public update(cursor: Cursor) {
@@ -303,15 +297,16 @@ export class Pellet extends Component {
   loc: Point;
   r: number;
 
-  constructor(target: HTMLCanvasElement, noGo: Path, r = 15) {
+  constructor(target: HTMLCanvasElement, noGo: Path) {
     super();
 
-    this.r = r;
+    this.r = 15;
     this.target = target;
     this.place(noGo);
   }
 
-  // Choose random points within bb (bounding box) until no walls or snek
+  // Choose random point within target until
+  // no walls or snek within buffer range
   place(noGo: Path, buffer = 30) {
     if (noGo !== undefined) {
       noGo = noGo;
@@ -327,13 +322,13 @@ export class Pellet extends Component {
         y: randomBetween(buffer, this.target.clientHeight - buffer),
       };
 
-      // Place is fine if there is no noGo
+      // loc is fine if there is no noGo
       if (noGo.length === 0) {
         this.loc = loc;
         break;
       }
 
-      // Check if pellet location within buffer distance of noGo path.
+      // Check if loc within buffer distance of noGo path.
       for (let i = 0; i < noGo.length - 1; i++) {
         if (
           intersection([noGo[i], noGo[i + 1]], {

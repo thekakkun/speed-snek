@@ -6,7 +6,7 @@ import {
   SnekGraphics,
   SpeedGraphics,
 } from "./graphics";
-import { ConcreteMediator, Cursor, Snek, Pellet, SpeedSnek } from "./model";
+import { SpeedSnek, Cursor, Snek, Pellet } from "./model";
 
 const width = 512;
 const gameHeight = 688;
@@ -37,8 +37,7 @@ const snek = new Snek({
   y: gameCanvas.clientHeight / 2,
 });
 const pellet = new Pellet(gameCanvas, snek.path);
-const speedSnek = new SpeedSnek();
-const mediator = new ConcreteMediator(speedSnek, cursor, snek, pellet);
+const speedSnek = new SpeedSnek(cursor, snek, pellet);
 
 const gameGraphics = new Composite();
 if (process.env.NODE_ENV === "development") {
