@@ -1,19 +1,27 @@
 <!DOCTYPE html>
 <html lang="en-US">
-
-<head>
-    <meta charset="utf-8">
+  <head>
+    <meta charset="utf-8" />
     <title>Speed Snek!</title>
-    <link rel="shortcut icon" href="../src/images/favicon.png" type="image/x-icon">
-    <link rel="stylesheet" href="../src/styles/main.scss">
+    <link
+      rel="shortcut icon"
+      href="../src/images/favicon.png"
+      type="image/x-icon"
+    />
+    <link rel="stylesheet" href="../src/styles/main.scss" />
     <script type="module" src="../src/scripts/main.ts"></script>
-</head>
+  </head>
 
-<body>
-    <div id="speedSnek">
-        <canvas id="ui"></canvas>
-        <canvas id="game"></canvas>
+  <body>
+    <div class="speedSnek">
+      <div class="speedSnek__ui">
+        <div class="score">
+          <p id="currentScore" class="score__current">Score:</p>
+          <p id="bestScore" class="score__best">Best:</p>
+        </div>
+        <canvas id="ui" class="ui__speedometer"></canvas>
+      </div>
+      <canvas id="game" class="speedSnek__game"></canvas>
     </div>
-</body>
-
+  </body>
 </html>
