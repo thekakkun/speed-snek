@@ -20,15 +20,10 @@ let graphics: Composite;
 
 const uiHeight = 80;
 const [width, height] = gameSize(uiHeight);
+console.log([width, height]);
 
 const uiCanvas = new Canvas("ui", Math.min(width - 200, 400), 80);
 const gameCanvas = new Canvas("game", width, height);
-
-// document.addEventListener("resize", () => {
-//   const [width, height] = gameSize(uiHeight);
-//   uiCanvas.setSize(Math.min(width - 200, 400), 80);
-//   gameCanvas.setSize(width, height);
-// });
 
 cursor = new Cursor(gameCanvas.element);
 snek = new Snek({
