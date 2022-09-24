@@ -138,21 +138,6 @@ export class PelletGraphics extends GraphicsComponent<Pellet> {
   }
 }
 
-export class ScoreGraphics extends GraphicsComponent<Model> {
-  target: CanvasRenderingContext2D;
-
-  constructor(data: Model, target: CanvasRenderingContext2D) {
-    super(data, target);
-  }
-
-  render() {
-    this.target.font = "25px monospace";
-    this.target.fillStyle = "black";
-    this.target.fillText(`Score: ${this.data.score}`, 0, 30);
-    this.target.fillText(` Best: ${this.data.bestScore}`, 0, 60);
-  }
-}
-
 export class CurrentScore extends GraphicsComponent<Model> {
   target: HTMLElement;
 
@@ -161,7 +146,8 @@ export class CurrentScore extends GraphicsComponent<Model> {
   }
 
   render() {
-    this.target.innerText = `Score: ${String(this.data.score)}`;
+    let display = `Score: ${String(this.data.score).padStart(2, "\xa0")}`;
+    this.target.innerText = display;
   }
 }
 
@@ -173,7 +159,8 @@ export class BestScore extends GraphicsComponent<Model> {
   }
 
   render() {
-    this.target.innerText = `Best: ${String(this.data.bestScore)}`;
+    let display = `Best: ${String(this.data.bestScore).padStart(2, "\xa0")}`;
+    this.target.innerText = display;
   }
 }
 
@@ -187,7 +174,7 @@ export class SpeedGraphics extends GraphicsComponent<Cursor> {
   render() {
     const padding = 10;
     const meterStart = {
-      x: 160,
+      x: padding,
       y: padding,
     };
     const meterSize = {

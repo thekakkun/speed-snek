@@ -5,7 +5,6 @@ import {
   CurrentScore,
   CursorGraphics,
   PelletGraphics,
-  ScoreGraphics,
   SnekGraphics,
   SpeedGraphics,
 } from "./view";
@@ -18,7 +17,7 @@ let pellet: Pellet;
 
 let graphics: Composite;
 
-const uiCanvas = new Canvas("ui", 512, 80);
+const uiCanvas = new Canvas("ui", 350, 80);
 const gameCanvas = new Canvas("game", 512, 688);
 
 cursor = new Cursor(gameCanvas.element);
@@ -28,7 +27,6 @@ snek = new Snek({
 });
 pellet = new Pellet(gameCanvas.element, snek.path);
 model = new Model(cursor, snek, pellet);
-// document.addEventListener("pointermove", cursor.moveHandler);
 
 const gameGraphics = new Composite();
 if (process.env.NODE_ENV === "development") {
@@ -40,12 +38,14 @@ gameGraphics.add(new PelletGraphics(pellet, gameCanvas.context));
 const uiGraphics = new Composite();
 uiGraphics.add(new SpeedGraphics(cursor, uiCanvas.context));
 uiGraphics.add(
-  new CurrentScore(model, document.querySelector(".ui__score") as HTMLElement)
+  new CurrentScore(
+    model,
+    document.getElementById("currentScore") as HTMLElement
+  )
 );
 uiGraphics.add(
-  new BestScore(model, document.querySelector(".ui__best") as HTMLElement)
+  new BestScore(model, document.getElementById("bestScore") as HTMLElement)
 );
-uiGraphics.add(new ScoreGraphics(model, uiCanvas.context));
 
 graphics = new Composite();
 graphics.add(gameGraphics);
