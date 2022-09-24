@@ -8,11 +8,10 @@ export function gameSize(uiHeight = 80): [number, number] {
   const ratio = 1.5;
   const maxWidth = 600;
 
-  const dispHeight = window.screen.availHeight;
-  const dispWidth = window.screen.availWidth;
+  const dispHeight = document.documentElement.clientHeight;
+  const dispWidth = document.documentElement.clientWidth;
 
-  if (dispHeight - uiHeight < dispWidth) {
-    console.log("wider");
+  if ((dispHeight - uiHeight) / dispWidth < ratio) {
     height = Math.min(maxWidth, dispHeight - uiHeight);
     width = height * ratio;
   } else {
