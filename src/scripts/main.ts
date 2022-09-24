@@ -4,6 +4,7 @@ import {
   Composite,
   CurrentScore,
   CursorGraphics,
+  gameSize,
   PelletGraphics,
   SnekGraphics,
   SpeedGraphics,
@@ -17,8 +18,11 @@ let pellet: Pellet;
 
 let graphics: Composite;
 
-const uiCanvas = new Canvas("ui", 350, 80);
-const gameCanvas = new Canvas("game", 512, 688);
+const uiHeight = 80;
+const [width, height] = gameSize(uiHeight);
+
+const uiCanvas = new Canvas("ui", width - 200, 80);
+const gameCanvas = new Canvas("game", width, height);
 
 cursor = new Cursor(gameCanvas.element);
 snek = new Snek({

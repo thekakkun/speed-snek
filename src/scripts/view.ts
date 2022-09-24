@@ -1,6 +1,29 @@
 import { Point } from "./geometry";
 import { Cursor, Snek, Pellet, Model } from "./model";
 
+export function gameSize(uiHeight = 80): [number, number] {
+  let width: number;
+  let height: number;
+
+  const ratio = 1.5;
+  const dpr = window.devicePixelRatio;
+  const maxWidth = 600;
+
+  const dispHeight = document.documentElement.clientHeight;
+  const dispWidth = document.documentElement.clientWidth;
+
+  if (dispHeight - uiHeight < dispWidth) {
+    console.log('wider');
+    height = Math.min(maxWidth, dispHeight - uiHeight);
+    width = height * ratio;
+  } else {
+    width = Math.min(maxWidth, dispWidth);
+    height = width * ratio;
+  }
+
+  return [width, height];
+}
+
 export class Canvas {
   height: number;
   width: number;
@@ -8,10 +31,14 @@ export class Canvas {
   context: CanvasRenderingContext2D;
 
   constructor(id: string, width: number, height: number) {
+    this.element = document.getElementById(id) as HTMLCanvasElement;
+    this.setSize(width, height);
+  }
+
+  setSize(width: number, height: number) {
     this.width = width;
     this.height = height;
 
-    this.element = document.getElementById(id) as HTMLCanvasElement;
     this.element.style.width = `${width}px`;
     this.element.style.height = `${height}px`;
 
