@@ -20,7 +20,6 @@ let graphics: Composite;
 
 const uiHeight = 80;
 const [width, height] = gameSize(uiHeight);
-console.log([width, height]);
 
 const uiCanvas = new Canvas("ui", Math.min(width - 200, 400), 80);
 const gameCanvas = new Canvas("game", width, height);

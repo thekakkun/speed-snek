@@ -143,9 +143,11 @@ export class Cursor extends Component {
   }
 
   public moveHandler(e: PointerEvent) {
+    const gameWrapper = this.target.parentElement as HTMLElement;
+
     const point = {
-      x: e.x - this.target.offsetLeft,
-      y: e.y - this.target.offsetTop,
+      x: e.x - gameWrapper.offsetLeft,
+      y: e.y - gameWrapper.offsetTop,
     };
 
     this.path.unshift(point);
