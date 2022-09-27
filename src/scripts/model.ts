@@ -146,8 +146,8 @@ export class Cursor extends Component {
     const gameWrapper = this.target.parentElement as HTMLElement;
 
     const point = {
-      x: e.x - gameWrapper.offsetLeft,
-      y: e.y - gameWrapper.offsetTop,
+      x: e.x - gameWrapper.offsetLeft - gameWrapper.clientLeft,
+      y: e.y - gameWrapper.offsetTop - gameWrapper.clientTop,
     };
 
     this.path.unshift(point);
@@ -241,6 +241,7 @@ export class Snek extends Component {
 
   constructor(startLoc: Point) {
     super();
+    console.log("hi snek!");
     this.segments = 4;
     this.segLength = 50;
     this.snekWidth = 10;
@@ -293,12 +294,12 @@ export class Pellet extends Component {
   loc: Point | null;
   r: number;
 
-  constructor(target: HTMLCanvasElement, noGo: Path) {
+  constructor(target: HTMLCanvasElement) {
     super();
 
     this.r = 15;
     this.target = target;
-    this.place(noGo);
+    this.loc = null;
   }
 
   // Choose random point within target until

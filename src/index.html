@@ -17,6 +17,32 @@
   </head>
 
   <body>
+    <div id="info" class="info">
+      <div class="info__content">
+        <h1>Speed Snek!</h1>
+        <h2>Instructions</h2>
+        <ul>
+          <li>Control the snek with your mouse or finger</li>
+          <li>
+            Eating pellets will increase:
+            <ul>
+              <li>your score</li>
+              <li>the length of your snek</li>
+              <li>the minimum speed limit</li>
+            </ul>
+          </li>
+          <li>
+            Game over if you:
+            <ul>
+              <li>Hit yourself</li>
+              <li>Hit the wall</li>
+              <li>Go under the minimum speed limit</li>
+            </ul>
+          </li>
+        </ul>
+        <button id="startButton">Start!</button>
+      </div>
+    </div>
     <div class="speedSnek">
       <div class="speedSnek__ui">
         <div class="score">
@@ -26,7 +52,7 @@
         <canvas id="ui" class="ui__speedometer"></canvas>
       </div>
       <div class="speedSnek__game">
-        <p class="game__notification">Hello World!</p>
+        <p id="message" class="game__message"></p>
         <canvas class="game__board" id="game"> </canvas>
       </div>
     </div>

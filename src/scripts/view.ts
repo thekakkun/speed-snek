@@ -1,4 +1,5 @@
-import { Point } from "./geometry";
+import { stringify } from "querystring";
+import { Arc, Path, Point } from "./geometry";
 import { Cursor, Snek, Pellet, Model } from "./model";
 
 export function gameSize(uiHeight = 80): [number, number] {
@@ -49,6 +50,10 @@ export class Canvas {
     this.context = this.element.getContext("2d") as CanvasRenderingContext2D;
     this.context.scale(dpr, dpr);
   }
+
+  clear() {
+    this.context.clearRect(0, 0, this.width, this.height);
+  }
 }
 
 abstract class Component {
@@ -77,6 +82,10 @@ export class Composite extends Component {
     const ix = this.children.indexOf(component);
     this.children.splice(ix, 1);
 
+    if (component instanceof Text) {
+      component.target.innerText = "";
+    }
+
     component.setParent(null);
   }
 
@@ -95,6 +104,83 @@ abstract class GraphicsComponent<Type> extends Component {
     super();
     this.data = data;
     this.target = context;
+  }
+}
+
+export class CanvasLine extends GraphicsComponent<Path> {
+  target: CanvasRenderingContext2D;
+  color: string;
+  width: number;
+
+  constructor(
+    data: Path,
+    target: CanvasRenderingContext2D,
+    color: string,
+    width: number
+  ) {
+    super(data, target);
+    this.color = color;
+    this.width = width;
+  }
+
+  render() {
+    const path = this.data;
+
+    if (path.length !== 0) {
+      this.target.strokeStyle = this.color;
+      this.target.lineWidth = this.width;
+      this.target.lineCap = "round";
+      this.target.lineJoin = "round";
+      this.target.beginPath();
+      this.target.moveTo(path[0].x, path[0].y);
+      path.forEach((point: Point) => {
+        this.target.lineTo(point.x, point.y);
+      });
+      this.target.stroke();
+    }
+  }
+}
+
+export class CanvasCircle extends GraphicsComponent<Arc> {
+  target: CanvasRenderingContext2D;
+  color: string;
+  width: number;
+
+  constructor(
+    data: Arc,
+    target: CanvasRenderingContext2D,
+    color: string,
+    width: number
+  ) {
+    super(data, target);
+    this.color = color;
+    this.width = width;
+  }
+
+  render() {
+    this.target.beginPath();
+    this.target.strokeStyle = this.color;
+    this.target.lineWidth = this.width;
+    this.target.arc(
+      this.data.center.x,
+      this.data.center.y,
+      this.data.radius,
+      0,
+      Math.PI * 2
+    );
+    this.target.stroke();
+  }
+}
+
+export class Text extends GraphicsComponent<string> {
+  target: HTMLElement;
+
+  constructor(data: string, target: HTMLElement) {
+    super(data, target);
+  }
+
+  render() {
+    this.target.innerText = this.data;
   }
 }
 
@@ -127,16 +213,18 @@ export class SnekGraphics extends GraphicsComponent<Snek> {
   }
 
   render() {
-    this.target.strokeStyle = "green";
-    this.target.lineCap = "round";
-    this.target.lineJoin = "round";
-    this.target.lineWidth = this.data.snekWidth;
-    this.target.beginPath();
-    this.target.moveTo(this.data.path[0].x, this.data.path[0].y);
-    this.data.path.forEach((point: Point) => {
-      this.target.lineTo(point.x, point.y);
-    });
-    this.target.stroke();
+    if (this.data.path.length !== 0) {
+      this.target.strokeStyle = "green";
+      this.target.lineCap = "round";
+      this.target.lineJoin = "round";
+      this.target.lineWidth = this.data.snekWidth;
+      this.target.beginPath();
+      this.target.moveTo(this.data.path[0].x, this.data.path[0].y);
+      this.data.path.forEach((point: Point) => {
+        this.target.lineTo(point.x, point.y);
+      });
+      this.target.stroke();
+    }
   }
 }
 
