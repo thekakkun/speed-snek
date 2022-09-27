@@ -1,18 +1,15 @@
-import { start } from "repl";
 import { Arc, dist } from "./geometry";
 import { Cursor, Model, Pellet, Snek } from "./model";
 import {
-  BestScore,
   Canvas,
   CanvasCircle,
   Composite,
-  CurrentScore,
   CursorGraphics,
   gameSize,
   PelletGraphics,
   SnekGraphics,
   SpeedGraphics,
-} from "./view";
+} from "./graphics";
 
 export class SpeedSnek {
   private state: State;
@@ -31,7 +28,6 @@ export class SpeedSnek {
     // initialize canvas
     const uiHeight = 80;
     const [width, height] = gameSize(uiHeight);
-
     this.speedCanvas = new Canvas("ui", Math.min(width - 200, 400), 80);
     this.gameCanvas = new Canvas("game", width, height);
 
@@ -53,8 +49,10 @@ export class SpeedSnek {
     if (this.state) {
       this.state.exit();
     }
+
     this.state = state;
     this.state.setContext(this);
+
     this.state.enter();
   }
 
@@ -79,8 +77,11 @@ abstract class State {
   public context: SpeedSnek;
   public graphics: Composite;
 
+  messageElement: HTMLElement;
+
   constructor(graphics = new Composite()) {
     this.graphics = graphics;
+    this.messageElement = document.getElementById("message") as HTMLElement;
   }
 
   public setContext(context: SpeedSnek) {
@@ -88,13 +89,12 @@ abstract class State {
   }
 
   public abstract enter(): void;
+  public abstract exit(): void;
 
   public update(): void {}
   public render(): void {
     return this.graphics.render();
   }
-
-  public abstract exit(): void;
 }
 
 // Display game instructions, show start button
@@ -128,19 +128,18 @@ export class Title extends State {
 
 // UI and snek are live, ready for user input
 export class Ready extends State {
+  cursor: Cursor;
+
   readyArea!: Arc;
   readyAreaGraphics!: CanvasCircle;
-  messageElement: HTMLElement;
-  messageGraphics!: Text;
 
   constructor() {
     super();
     this.checkPlayerReady = this.checkPlayerReady.bind(this);
-    this.messageElement = document.getElementById("message") as HTMLElement;
-    this.messageElement.innerText = "Pointer in the circle to start";
   }
 
   public enter(): void {
+    this.messageElement.innerText = "Pointer in the circle to start";
     this.initUiGraphics();
     this.initGameGraphics();
     document.addEventListener("pointermove", this.checkPlayerReady);
@@ -150,22 +149,19 @@ export class Ready extends State {
     const uiContext = this.context.speedCanvas.context;
     const model = this.context.model;
     const cursor = this.context.cursor;
+
     const uiGraphics = new Composite();
     const speedGraphics = new SpeedGraphics(cursor, uiContext);
-    const currentScore = new CurrentScore(
-      model,
-      document.getElementById("currentScore") as HTMLElement
-    );
-    const bestScore = new BestScore(
-      model,
-      document.getElementById("bestScore") as HTMLElement
-    );
 
     uiGraphics.add(speedGraphics);
-    uiGraphics.add(currentScore);
-    uiGraphics.add(bestScore);
-
     this.graphics.add(uiGraphics);
+
+    const currentScore = document.getElementById("currentScore") as HTMLElement;
+    currentScore.innerHTML = `Score: ${"0".padStart(2, "\xa0")}`;
+
+    const bestScore = document.getElementById("bestScore") as HTMLElement;
+    const bestScoreValue = localStorage.getItem("bestScore") || "0";
+    bestScore.innerHTML = `Score: ${bestScoreValue.padStart(2, "\xa0")}`;
   }
 
   initGameGraphics() {
@@ -226,13 +222,11 @@ export class Ready extends State {
 // UI and snek are live, showing countdown
 export class Set extends State {
   startTime: number;
-  messageElement: HTMLElement;
 
   constructor(graphics: Composite) {
     super(graphics);
 
     this.startTime = Date.now();
-    this.messageElement = document.getElementById("message") as HTMLElement;
   }
 
   public enter(): void {
@@ -258,17 +252,13 @@ export class Set extends State {
 
 // game is live
 export class Go extends State {
-  messageElement: HTMLElement;
-
   constructor(graphics: Composite) {
     super(graphics);
-    this.messageElement = document.getElementById("message") as HTMLElement;
   }
 
   public enter(): void {
     this.messageElement.innerHTML = "GO!";
     setTimeout(() => {
-      console.log("foo");
       this.messageElement.innerText = "";
     }, 1000);
 

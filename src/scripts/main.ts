@@ -1,4 +1,4 @@
-import { SpeedSnek } from "./state";
+import { SpeedSnek } from "./speedSnek";
 
 let speedSnek = new SpeedSnek();
 speedSnek.gameLoop();

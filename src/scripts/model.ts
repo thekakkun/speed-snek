@@ -177,7 +177,7 @@ export class Cursor extends Component {
   }
 
   public updateSpeed() {
-    const alpha = 0.1;
+    const alpha = 0.05;
     this.speed = this.getSpeed();
     if (this.speed !== NaN) {
       this.smoothSpeed = alpha * this.speed + (1 - alpha) * this.smoothSpeed;

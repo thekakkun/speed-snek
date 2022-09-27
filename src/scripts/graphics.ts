@@ -1,6 +1,5 @@
-import { stringify } from "querystring";
 import { Arc, Path, Point } from "./geometry";
-import { Cursor, Snek, Pellet, Model } from "./model";
+import { Cursor, Snek, Pellet } from "./model";
 
 export function gameSize(uiHeight = 80): [number, number] {
   let width: number;
@@ -94,9 +93,9 @@ export class Composite extends Component {
 
 abstract class GraphicsComponent<Type> extends Component {
   public data: Type;
-  public target: CanvasRenderingContext2D | HTMLElement;
+  public target: CanvasRenderingContext2D;
 
-  constructor(data: Type, context: CanvasRenderingContext2D | HTMLElement) {
+  constructor(data: Type, context: CanvasRenderingContext2D) {
     super();
     this.data = data;
     this.target = context;
@@ -257,32 +256,6 @@ export class PelletGraphics extends GraphicsComponent<Pellet> {
       );
       this.target.fill();
     }
-  }
-}
-
-export class CurrentScore extends GraphicsComponent<Model> {
-  target: HTMLElement;
-
-  constructor(data: Model, target: HTMLElement) {
-    super(data, target);
-  }
-
-  render() {
-    let display = `Score: ${String(this.data.score).padStart(2, "\xa0")}`;
-    this.target.innerText = display;
-  }
-}
-
-export class BestScore extends GraphicsComponent<Model> {
-  target: HTMLElement;
-
-  constructor(data: Model, target: HTMLElement) {
-    super(data, target);
-  }
-
-  render() {
-    let display = `Best: ${String(this.data.bestScore).padStart(2, "\xa0")}`;
-    this.target.innerText = display;
   }
 }
 
