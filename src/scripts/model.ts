@@ -258,7 +258,7 @@ export class Snek extends Component {
 
   public update(cursor: Cursor) {
     const cursorPath = cursor.path;
-    this.path = [cursorPath[0]];
+    Object.assign(this.path, cursorPath, { length: 1 });
     let segHead = this.path[this.path.length - 1];
     for (let [ix, p] of cursorPath.entries()) {
       if (this.path.length <= this.segments) {
@@ -290,7 +290,7 @@ export class Snek extends Component {
 
 export class Pellet extends Component {
   target: HTMLCanvasElement;
-  loc: Point | null;
+  loc: Point;
   r: number;
 
   constructor(target: HTMLCanvasElement) {
@@ -298,7 +298,7 @@ export class Pellet extends Component {
 
     this.r = 15;
     this.target = target;
-    this.loc = null;
+    this.loc = Object.create({});
   }
 
   // Choose random point within target until
@@ -339,7 +339,8 @@ export class Pellet extends Component {
       }
 
       if (locValid) {
-        this.loc = loc;
+        Object.assign(this.loc!, loc);
+        // this.loc = loc;
         break;
       }
     }

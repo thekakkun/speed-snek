@@ -1,5 +1,6 @@
+import { compileFunction } from "vm";
 import { Arc, Path, Point } from "./geometry";
-import { Cursor, Snek, Pellet } from "./model";
+import { Cursor, Pellet } from "./model";
 
 export function gameSize(uiHeight = 80): [number, number] {
   let width: number;
@@ -103,7 +104,6 @@ abstract class GraphicsComponent<Type> extends Component {
 }
 
 export class CanvasLine extends GraphicsComponent<Path> {
-  target: CanvasRenderingContext2D;
   color: string;
   width: number;
 
@@ -137,7 +137,6 @@ export class CanvasLine extends GraphicsComponent<Path> {
 }
 
 export class CanvasCircle extends GraphicsComponent<Arc> {
-  target: CanvasRenderingContext2D;
   color: string;
   width: number;
 
@@ -168,7 +167,6 @@ export class CanvasCircle extends GraphicsComponent<Arc> {
 }
 
 export class CanvasDisc extends GraphicsComponent<Arc> {
-  target: CanvasRenderingContext2D;
   color: string;
 
   constructor(data: Arc, target: CanvasRenderingContext2D, color: string) {
@@ -192,76 +190,31 @@ export class CanvasDisc extends GraphicsComponent<Arc> {
   }
 }
 
-export class CursorGraphics extends GraphicsComponent<Cursor> {
-  target: CanvasRenderingContext2D;
+export class CanvasRect extends GraphicsComponent<[Point, Point]> {
+  color: string;
 
-  constructor(data: Cursor, target: CanvasRenderingContext2D) {
+  constructor(
+    data: [Point, Point],
+    target: CanvasRenderingContext2D,
+    color: string
+  ) {
     super(data, target);
+    this.color = color;
   }
 
   render() {
-    if (this.data.path.length !== 0) {
-      this.target.strokeStyle = "red";
-      this.target.lineWidth = 1;
-      this.target.beginPath();
-      this.target.moveTo(this.data.path[0].x, this.data.path[0].y);
-      this.data.path.forEach((point: Point) => {
-        this.target.lineTo(point.x, point.y);
-      });
-      this.target.stroke();
-    }
-  }
-}
+    const rectStart = this.data[0];
+    const rectSize = {
+      x: this.data[1].x - rectStart.x,
+      y: this.data[1].y - rectStart.y,
+    };
 
-export class SnekGraphics extends GraphicsComponent<Snek> {
-  target: CanvasRenderingContext2D;
-
-  constructor(data: Snek, target: CanvasRenderingContext2D) {
-    super(data, target);
-  }
-
-  render() {
-    if (this.data.path.length !== 0) {
-      this.target.strokeStyle = "green";
-      this.target.lineCap = "round";
-      this.target.lineJoin = "round";
-      this.target.lineWidth = this.data.snekWidth;
-      this.target.beginPath();
-      this.target.moveTo(this.data.path[0].x, this.data.path[0].y);
-      this.data.path.forEach((point: Point) => {
-        this.target.lineTo(point.x, point.y);
-      });
-      this.target.stroke();
-    }
-  }
-}
-
-export class PelletGraphics extends GraphicsComponent<Pellet> {
-  target: CanvasRenderingContext2D;
-
-  constructor(data: Pellet, target: CanvasRenderingContext2D) {
-    super(data, target);
-  }
-
-  render() {
-    if (this.data.loc) {
-      this.target.fillStyle = "blue";
-      this.target.beginPath();
-      this.target.arc(
-        this.data.loc.x,
-        this.data.loc.y,
-        this.data.r,
-        0,
-        Math.PI * 2
-      );
-      this.target.fill();
-    }
+    this.target.fillStyle = this.color;
+    this.target.fillRect(rectStart.x, rectStart.y, rectSize.x, rectSize.y);
   }
 }
 
 export class SpeedGraphics extends GraphicsComponent<Cursor> {
-  target: CanvasRenderingContext2D;
-
   constructor(data: Cursor, target: CanvasRenderingContext2D) {
     super(data, target);
   }

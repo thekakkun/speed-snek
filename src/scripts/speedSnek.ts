@@ -3,11 +3,10 @@ import { Cursor, Model, Pellet, Snek } from "./model";
 import {
   Canvas,
   CanvasCircle,
+  CanvasDisc,
+  CanvasLine,
   Composite,
-  CursorGraphics,
   gameSize,
-  PelletGraphics,
-  SnekGraphics,
   SpeedGraphics,
 } from "./graphics";
 
@@ -178,10 +177,13 @@ export class Ready extends State {
     const snek = this.game.snek;
 
     const gameGraphics = new Composite();
-    const snekLine = new SnekGraphics(snek, gameContext);
-    const cursorLine = new CursorGraphics(cursor, gameContext);
-    // const snekLine = new CanvasLine(snek.path, gameContext, "green", 8);
-    // const cursorLine = new CanvasLine(cursor.path, gameContext, "red", 1);
+    const snekLine = new CanvasLine(
+      snek.path,
+      gameContext,
+      "green",
+      snek.snekWidth
+    );
+    const cursorLine = new CanvasLine(cursor.path, gameContext, "red", 1);
 
     // draw cursor line (if in dev mode) and snek
     if (process.env.NODE_ENV === "development") {
@@ -270,7 +272,14 @@ export class Go extends State {
     pellet.place(snek.path);
 
     const gameContext = this.game.gameCanvas.context;
-    this.graphics.add(new PelletGraphics(this.game.pellet, gameContext));
+    // this.graphics.add(new PelletGraphics(this.game.pellet, gameContext));
+    this.graphics.add(
+      new CanvasDisc(
+        { center: this.game.pellet.loc!, radius: this.game.pellet.r },
+        gameContext,
+        "blue"
+      )
+    );
   }
 
   update() {}
