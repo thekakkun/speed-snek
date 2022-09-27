@@ -12,17 +12,24 @@ import {
 } from "./graphics";
 
 export class SpeedSnek {
+  // store current state
   private state: State;
 
+  // game canvases
   public speedCanvas: Canvas;
   public gameCanvas: Canvas;
+  reqId: number;
 
+  // game model
   public model: Model;
   public cursor: Cursor;
   public snek: Snek;
   public pellet: Pellet;
 
-  reqId: number;
+  // gameplay status
+  public score: number;
+  public bestScore: number;
+  public speedLimit: number;
 
   constructor() {
     // initialize canvas
@@ -74,7 +81,7 @@ export class SpeedSnek {
 }
 
 abstract class State {
-  public context: SpeedSnek;
+  public game: SpeedSnek;
   public graphics: Composite;
 
   messageElement: HTMLElement;
@@ -84,8 +91,8 @@ abstract class State {
     this.messageElement = document.getElementById("message") as HTMLElement;
   }
 
-  public setContext(context: SpeedSnek) {
-    this.context = context;
+  public setContext(game: SpeedSnek) {
+    this.game = game;
   }
 
   public abstract enter(): void;
@@ -113,7 +120,7 @@ export class Title extends State {
     ) as HTMLButtonElement;
 
     this.startButton.addEventListener("click", () =>
-      this.context.transitionTo(new Ready())
+      this.game.transitionTo(new Ready())
     );
   }
 
@@ -146,9 +153,8 @@ export class Ready extends State {
   }
 
   initUiGraphics() {
-    const uiContext = this.context.speedCanvas.context;
-    const model = this.context.model;
-    const cursor = this.context.cursor;
+    const uiContext = this.game.speedCanvas.context;
+    const cursor = this.game.cursor;
 
     const uiGraphics = new Composite();
     const speedGraphics = new SpeedGraphics(cursor, uiContext);
@@ -165,11 +171,11 @@ export class Ready extends State {
   }
 
   initGameGraphics() {
-    const gameCanvas = this.context.gameCanvas;
-    const gameContext = this.context.gameCanvas.context;
+    const gameCanvas = this.game.gameCanvas;
+    const gameContext = this.game.gameCanvas.context;
 
-    const cursor = this.context.cursor;
-    const snek = this.context.snek;
+    const cursor = this.game.cursor;
+    const snek = this.game.snek;
 
     const gameGraphics = new Composite();
     const snekLine = new SnekGraphics(snek, gameContext);
@@ -199,7 +205,7 @@ export class Ready extends State {
   }
 
   checkPlayerReady(e: PointerEvent) {
-    const gameCanvas = this.context.gameCanvas;
+    const gameCanvas = this.game.gameCanvas;
     const gameWrapper = gameCanvas.element.parentElement as HTMLElement;
 
     const cursor = {
@@ -208,13 +214,12 @@ export class Ready extends State {
     };
 
     if (dist(cursor, this.readyArea.center) < this.readyArea.radius) {
-      this.context.transitionTo(new Set(this.graphics));
+      this.game.transitionTo(new Set(this.graphics));
     }
   }
 
   public exit(): void {
     document.removeEventListener("pointermove", this.checkPlayerReady);
-    this.messageElement.innerText = "";
     this.graphics.remove(this.readyAreaGraphics);
   }
 }
@@ -230,7 +235,7 @@ export class Set extends State {
   }
 
   public enter(): void {
-    const cursor = this.context.cursor;
+    const cursor = this.game.cursor;
     document.addEventListener("pointermove", cursor.moveHandler);
   }
 
@@ -241,13 +246,11 @@ export class Set extends State {
     this.messageElement.innerText = String(countStart - Math.floor(elapsed));
 
     if (countStart < elapsed) {
-      this.context.transitionTo(new Go(this.graphics));
+      this.game.transitionTo(new Go(this.graphics));
     }
   }
 
-  public exit(): void {
-    this.messageElement.innerText = "";
-  }
+  public exit(): void {}
 }
 
 // game is live
@@ -262,12 +265,12 @@ export class Go extends State {
       this.messageElement.innerText = "";
     }, 1000);
 
-    const pellet = this.context.pellet;
-    const snek = this.context.snek;
+    const pellet = this.game.pellet;
+    const snek = this.game.snek;
     pellet.place(snek.path);
 
-    const gameContext = this.context.gameCanvas.context;
-    this.graphics.add(new PelletGraphics(this.context.pellet, gameContext));
+    const gameContext = this.game.gameCanvas.context;
+    this.graphics.add(new PelletGraphics(this.game.pellet, gameContext));
   }
 
   update() {}
@@ -277,8 +280,12 @@ export class Go extends State {
 
 // Snek is dead :(
 export class GameOver extends State {
-  constructor() {
+  reason: string;
+
+  constructor(reason: string) {
     super();
+
+    this.reason = reason;
   }
 
   public enter(): void {}
