@@ -1,3 +1,4 @@
+import { start } from "repl";
 import { Arc, dist } from "./geometry";
 import { Cursor, Model, Pellet, Snek } from "./model";
 import {
@@ -12,7 +13,6 @@ import {
   PelletGraphics,
   SnekGraphics,
   SpeedGraphics,
-  Text,
 } from "./view";
 
 export class SpeedSnek {
@@ -60,8 +60,13 @@ export class SpeedSnek {
   }
 
   public gameLoop() {
+    this.update();
     this.render();
     this.reqId = requestAnimationFrame(() => this.gameLoop());
+  }
+
+  public update(): void {
+    this.state.update();
   }
 
   public render(): void {
@@ -84,11 +89,13 @@ abstract class State {
   }
 
   public abstract enter(): void;
-  public abstract exit(): void;
 
+  public update(): void {}
   public render(): void {
     return this.graphics.render();
   }
+
+  public abstract exit(): void;
 }
 
 // Display game instructions, show start button
@@ -124,15 +131,14 @@ export class Title extends State {
 export class Ready extends State {
   readyArea!: Arc;
   readyAreaGraphics!: CanvasCircle;
+  messageElement: HTMLElement;
   messageGraphics!: Text;
 
   constructor() {
     super();
     this.checkPlayerReady = this.checkPlayerReady.bind(this);
-    this.messageGraphics = new Text(
-      "Pointer in the circle to start",
-      document.getElementById("message") as HTMLElement
-    );
+    this.messageElement = document.getElementById("message") as HTMLElement;
+    this.messageElement.innerText = "Pointer in the circle to start";
   }
 
   public enter(): void {
@@ -161,7 +167,6 @@ export class Ready extends State {
     uiGraphics.add(bestScore);
 
     this.graphics.add(uiGraphics);
-    this.graphics.add(this.messageGraphics);
   }
 
   initGameGraphics() {
@@ -214,30 +219,42 @@ export class Ready extends State {
 
   public exit(): void {
     document.removeEventListener("pointermove", this.checkPlayerReady);
-    this.graphics.remove(this.messageGraphics);
+    this.messageElement.innerText = "";
     this.graphics.remove(this.readyAreaGraphics);
   }
 }
 
 // UI and snek are live, showing countdown
 export class Set extends State {
-  messageGraphics: Text;
+  startTime: number;
+  messageElement: HTMLElement;
 
   constructor(graphics: Composite) {
     super(graphics);
-    this.messageGraphics = new Text(
-      "",
-      document.getElementById("message") as HTMLElement
-    );
+
+    this.startTime = Date.now();
+    this.messageElement = document.getElementById("message") as HTMLElement;
   }
 
   public enter(): void {
     const cursor = this.context.cursor;
     document.addEventListener("pointermove", cursor.moveHandler);
-
-    while (true) {}
   }
-  public exit(): void {}
+
+  update() {
+    const countStart = 3;
+    const elapsed = (Date.now() - this.startTime) / 1000;
+
+    this.messageElement.innerText = String(countStart - Math.floor(elapsed));
+
+    if (countStart < elapsed) {
+      this.context.transitionTo(new Go(this.graphics));
+    }
+  }
+
+  public exit(): void {
+    this.messageElement.innerText = "";
+  }
 }
 
 // game is live

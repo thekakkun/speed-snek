@@ -241,7 +241,6 @@ export class Snek extends Component {
 
   constructor(startLoc: Point) {
     super();
-    console.log("hi snek!");
     this.segments = 4;
     this.segLength = 50;
     this.snekWidth = 10;

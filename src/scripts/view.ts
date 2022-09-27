@@ -82,10 +82,6 @@ export class Composite extends Component {
     const ix = this.children.indexOf(component);
     this.children.splice(ix, 1);
 
-    if (component instanceof Text) {
-      component.target.innerText = "";
-    }
-
     component.setParent(null);
   }
 
@@ -169,18 +165,6 @@ export class CanvasCircle extends GraphicsComponent<Arc> {
       Math.PI * 2
     );
     this.target.stroke();
-  }
-}
-
-export class Text extends GraphicsComponent<string> {
-  target: HTMLElement;
-
-  constructor(data: string, target: HTMLElement) {
-    super(data, target);
-  }
-
-  render() {
-    this.target.innerText = this.data;
   }
 }
 
