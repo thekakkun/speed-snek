@@ -168,6 +168,31 @@ export class CanvasCircle extends GraphicsComponent<Arc> {
   }
 }
 
+export class CanvasDisc extends GraphicsComponent<Arc> {
+  target: CanvasRenderingContext2D;
+  color: string;
+
+  constructor(data: Arc, target: CanvasRenderingContext2D, color: string) {
+    super(data, target);
+    this.color = color;
+  }
+
+  render() {
+    if (this.data.center) {
+      this.target.fillStyle = this.color;
+      this.target.beginPath();
+      this.target.arc(
+        this.data.center.x,
+        this.data.center.y,
+        this.data.radius,
+        0,
+        Math.PI * 2
+      );
+      this.target.fill();
+    }
+  }
+}
+
 export class CursorGraphics extends GraphicsComponent<Cursor> {
   target: CanvasRenderingContext2D;
 

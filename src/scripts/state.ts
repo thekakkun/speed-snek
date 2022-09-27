@@ -5,7 +5,6 @@ import {
   BestScore,
   Canvas,
   CanvasCircle,
-  CanvasLine,
   Composite,
   CurrentScore,
   CursorGraphics,
@@ -259,11 +258,20 @@ export class Set extends State {
 
 // game is live
 export class Go extends State {
+  messageElement: HTMLElement;
+
   constructor(graphics: Composite) {
     super(graphics);
+    this.messageElement = document.getElementById("message") as HTMLElement;
   }
 
   public enter(): void {
+    this.messageElement.innerHTML = "GO!";
+    setTimeout(() => {
+      console.log("foo");
+      this.messageElement.innerText = "";
+    }, 1000);
+
     const pellet = this.context.pellet;
     const snek = this.context.snek;
     pellet.place(snek.path);
@@ -271,6 +279,8 @@ export class Go extends State {
     const gameContext = this.context.gameCanvas.context;
     this.graphics.add(new PelletGraphics(this.context.pellet, gameContext));
   }
+
+  update() {}
 
   public exit(): void {}
 }
