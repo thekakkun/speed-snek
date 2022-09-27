@@ -4,13 +4,7 @@ function randomBetween(min: number, max: number) {
   return Math.random() * (max - min) + min;
 }
 
-type Notification =
-  | ["pointermove", Cursor]
-  | ["trimpath", Snek, number]
-  | ["eatpellet", Cursor]
-  | ["hitself", Cursor]
-  | ["hitwall", Cursor]
-  | ["tooslow", Cursor];
+type Notification = ["pointermove", Cursor] | ["trimpath", Snek, number];
 
 interface Mediator {
   notify(notification: Notification): void;
@@ -18,18 +12,11 @@ interface Mediator {
 
 // events are sent here, and the mediator passes them on to the correct handler.
 export class Model implements Mediator {
-  public score: number;
-  public bestScore: number;
-
   private cursor: Cursor;
   private snek: Snek;
   private pellet: Pellet;
 
   constructor(cursor: Cursor, snek: Snek, pellet: Pellet) {
-    this.score = 0;
-    const bestScore = localStorage.getItem("bestScore");
-    this.bestScore = bestScore ? Number(bestScore) : 0;
-
     this.cursor = cursor;
     this.cursor.setMediator(this);
     this.snek = snek;
@@ -45,7 +32,6 @@ export class Model implements Mediator {
       case "pointermove":
         this.snek.update(sender);
         this.cursor.updateSpeed();
-        this.cursor.checkCollision(this.snek, this.pellet);
         break;
 
       case "trimpath":
@@ -54,38 +40,10 @@ export class Model implements Mediator {
         this.cursor.trim(ix);
         break;
 
-      case "eatpellet":
-        console.log("nom!");
-        this.snek.grow();
-        this.increaseScore();
-        this.cursor.increaseSpeed();
-        this.pellet.place(this.snek.path);
-        break;
-
-      case "hitself":
-        console.log("ouch!");
-        this.gameOver(...notification);
-        break;
-
-      case "hitwall":
-        console.log("whoops!");
-        this.gameOver(...notification);
-        break;
-
-      case "tooslow":
-        console.log("faster!");
-        this.gameOver(...notification);
-        break;
-
       default:
         const _exhaustiveCheck: never = sender;
         return _exhaustiveCheck;
     }
-  }
-
-  increaseScore() {
-    this.score += 1;
-    this.bestScore = Math.max(this.bestScore, this.score);
   }
 
   gameOver(reason: Notification[0], cursor: Cursor) {
@@ -95,7 +53,7 @@ export class Model implements Mediator {
       tooslow: "You were too slow!",
     };
 
-    localStorage.setItem("bestScore", String(this.bestScore));
+    localStorage.setItem("bestScore", String("this.bestScore"));
 
     if (process.env.NODE_ENV === "production") {
       document.removeEventListener("pointermove", cursor.moveHandler);
@@ -123,22 +81,16 @@ export class Cursor extends Component {
   target: HTMLCanvasElement;
   path: Path;
   timeStamp: number[];
+  rawSpeed: number;
   speed: number;
-  smoothSpeed: number;
-  speedLimit: number;
-  speedIncrease: number;
-  maxSpeed: number;
 
   constructor(target: HTMLCanvasElement) {
     super();
     this.target = target;
     this.path = [];
     this.timeStamp = [];
+    this.rawSpeed = 0;
     this.speed = 0;
-    this.smoothSpeed = 0;
-    this.speedLimit = 0;
-    this.speedIncrease = 0.05;
-    this.maxSpeed = 5;
     this.moveHandler = this.moveHandler.bind(this);
   }
 
@@ -178,57 +130,9 @@ export class Cursor extends Component {
 
   public updateSpeed() {
     const alpha = 0.05;
-    this.speed = this.getSpeed();
-    if (this.speed !== NaN) {
-      this.smoothSpeed = alpha * this.speed + (1 - alpha) * this.smoothSpeed;
-    }
-
-    if (this.smoothSpeed < this.speedLimit) {
-      this.mediator.notify(["tooslow", this]);
-    }
-  }
-
-  public increaseSpeed() {
-    this.speedLimit = Math.min(
-      this.speedLimit + this.speedIncrease,
-      this.maxSpeed
-    );
-  }
-
-  public checkCollision(snek: Snek, pellet: Pellet) {
-    // snek vs pellet collisions
-    if (pellet.loc) {
-      if (
-        2 <= this.path.length &&
-        intersection([this.path[0], this.path[1]], {
-          center: pellet.loc,
-          radius: pellet.r + snek.snekWidth / 2,
-        })
-      ) {
-        this.mediator.notify(["eatpellet", this]);
-      }
-    }
-
-    // // snek vs wall collisions
-    if (
-      this.path[0].x - 1 <= 0 ||
-      this.target.clientWidth - 1 <= this.path[0].x ||
-      this.path[0].y - 1 <= 0 ||
-      this.target.clientHeight - 1 <= this.path[0].y
-    ) {
-      this.mediator.notify(["hitwall", this]);
-    }
-
-    // snek vs snek collisions
-    for (let i = 2; i < snek.path.length - 1; i++) {
-      if (
-        intersection(
-          [snek.path[0], snek.path[1]],
-          [snek.path[i], snek.path[i + 1]]
-        )
-      ) {
-        this.mediator.notify(["hitself", this]);
-      }
+    this.rawSpeed = this.getSpeed();
+    if (this.rawSpeed !== NaN) {
+      this.speed = alpha * this.rawSpeed + (1 - alpha) * this.speed;
     }
   }
 }

@@ -1,4 +1,4 @@
-import { Arc, dist } from "./geometry";
+import { Arc, dist, intersection } from "./geometry";
 import { Cursor, Model, Pellet, Snek } from "./model";
 import {
   Canvas,
@@ -17,7 +17,7 @@ export class SpeedSnek {
   // game canvases
   public speedCanvas: Canvas;
   public gameCanvas: Canvas;
-  reqId: number;
+  public reqId: number;
 
   // game model
   public model: Model;
@@ -29,6 +29,7 @@ export class SpeedSnek {
   public score: number;
   public bestScore: number;
   public speedLimit: number;
+  public maxSpeed: number;
 
   constructor() {
     // initialize canvas
@@ -46,6 +47,13 @@ export class SpeedSnek {
     this.pellet = new Pellet(this.gameCanvas.element);
     this.model = new Model(this.cursor, this.snek, this.pellet);
 
+    // initialize game state
+    this.score = 0;
+    const bestScore = localStorage.getItem("bestScore");
+    this.bestScore = bestScore ? Number(bestScore) : 0;
+    this.speedLimit = 0;
+    this.maxSpeed = 5;
+
     // Start on title screen
     this.transitionTo(new Title());
   }
@@ -62,6 +70,12 @@ export class SpeedSnek {
     this.state.enter();
   }
 
+  public increaseScore() {
+    this.score += 1;
+    this.bestScore = Math.max(this.bestScore, this.score);
+    this.speedLimit += Math.min(this.speedLimit + 0.05, this.maxSpeed);
+  }
+
   public gameLoop() {
     this.update();
     this.render();
@@ -76,6 +90,16 @@ export class SpeedSnek {
     this.gameCanvas.clear();
     this.speedCanvas.clear();
     this.state.render();
+    this.drawScore();
+  }
+
+  public drawScore(): void {
+    const currentScore = document.getElementById("currentScore") as HTMLElement;
+    currentScore.innerHTML = `Score: ${String(this.score).padStart(2, "\xa0")}`;
+
+    const bestScore = document.getElementById("bestScore") as HTMLElement;
+
+    bestScore.innerHTML = `Best: ${String(this.bestScore).padStart(2, "\xa0")}`;
   }
 }
 
@@ -160,13 +184,6 @@ export class Ready extends State {
 
     uiGraphics.add(speedGraphics);
     this.graphics.add(uiGraphics);
-
-    const currentScore = document.getElementById("currentScore") as HTMLElement;
-    currentScore.innerHTML = `Score: ${"0".padStart(2, "\xa0")}`;
-
-    const bestScore = document.getElementById("bestScore") as HTMLElement;
-    const bestScoreValue = localStorage.getItem("bestScore") || "0";
-    bestScore.innerHTML = `Score: ${bestScoreValue.padStart(2, "\xa0")}`;
   }
 
   initGameGraphics() {
@@ -272,7 +289,6 @@ export class Go extends State {
     pellet.place(snek.path);
 
     const gameContext = this.game.gameCanvas.context;
-    // this.graphics.add(new PelletGraphics(this.game.pellet, gameContext));
     this.graphics.add(
       new CanvasDisc(
         { center: this.game.pellet.loc!, radius: this.game.pellet.r },
@@ -282,7 +298,54 @@ export class Go extends State {
     );
   }
 
-  update() {}
+  update() {
+    const cursorPath = this.game.cursor.path;
+    const snek = this.game.snek;
+    const snekPath = snek.path;
+    const pellet = this.game.pellet;
+
+    // speed check
+    if (this.game.cursor.speed < this.game.speedLimit) {
+      console.log("faster!");
+    }
+
+    // snek vs. pellet collision
+    if (pellet.loc) {
+      if (
+        2 <= cursorPath.length &&
+        intersection([cursorPath[0], cursorPath[1]], {
+          center: pellet.loc,
+          radius: pellet.r + snek.snekWidth / 2,
+        })
+      ) {
+        console.log("nom!");
+        snek.grow();
+        this.game.increaseScore();
+        pellet.place(snek.path);
+      }
+    }
+
+    // snek vs. wall collision
+    const gameElement = this.game.gameCanvas.element;
+    if (
+      snekPath[0].x - 1 <= 0 ||
+      gameElement.clientWidth - 1 <= snekPath[0].x ||
+      snekPath[0].y - 1 <= 0 ||
+      gameElement.clientHeight - 1 <= snekPath[0].y
+    ) {
+      console.log("whoops!");
+    }
+
+    // snek vs. snek collision
+    for (let i = 2; i < snekPath.length - 1; i++) {
+      if (
+        intersection([snekPath[0], snekPath[1]], [snekPath[i], snekPath[i + 1]])
+      ) {
+        console.log("ouch!");
+        break;
+      }
+    }
+  }
 
   public exit(): void {}
 }

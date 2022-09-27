@@ -234,35 +234,35 @@ export class SpeedGraphics extends GraphicsComponent<Cursor> {
     this.target.fillStyle = "#eee";
     this.target.fillRect(meterStart.x, meterStart.y, meterSize.x, meterSize.y);
 
-    // Speed limit
-    this.target.fillStyle = "orangeRed";
-    this.target.fillRect(
-      meterStart.x,
-      meterStart.y,
-      (meterSize.x * this.data.speedLimit) / this.data.maxSpeed,
-      meterSize.y
-    );
+    // // Speed limit
+    // this.target.fillStyle = "orangeRed";
+    // this.target.fillRect(
+    //   meterStart.x,
+    //   meterStart.y,
+    //   (meterSize.x * this.data.speedLimit) / this.data.maxSpeed,
+    //   meterSize.y
+    // );
 
-    // Speedometer needle
-    const speed = Math.min(this.data.smoothSpeed, this.data.maxSpeed);
-    this.target.fillStyle = "green";
-    this.target.beginPath();
-    this.target.moveTo(
-      (meterSize.x * speed) / this.data.maxSpeed - 5 + meterStart.x,
-      meterStart.y + meterSize.y
-    );
-    this.target.lineTo(
-      (meterSize.x * speed) / this.data.maxSpeed + 5 + meterStart.x,
-      meterStart.y + meterSize.y
-    );
-    this.target.lineTo(
-      (meterSize.x * speed) / this.data.maxSpeed + 1 + meterStart.x,
-      meterStart.y + 10
-    );
-    this.target.lineTo(
-      (meterSize.x * speed) / this.data.maxSpeed - 1 + meterStart.x,
-      meterStart.y + 10
-    );
-    this.target.fill();
+    // // Speedometer needle
+    // const speed = Math.min(this.data.speed, this.data.maxSpeed);
+    // this.target.fillStyle = "green";
+    // this.target.beginPath();
+    // this.target.moveTo(
+    //   (meterSize.x * speed) / this.data.maxSpeed - 5 + meterStart.x,
+    //   meterStart.y + meterSize.y
+    // );
+    // this.target.lineTo(
+    //   (meterSize.x * speed) / this.data.maxSpeed + 5 + meterStart.x,
+    //   meterStart.y + meterSize.y
+    // );
+    // this.target.lineTo(
+    //   (meterSize.x * speed) / this.data.maxSpeed + 1 + meterStart.x,
+    //   meterStart.y + 10
+    // );
+    // this.target.lineTo(
+    //   (meterSize.x * speed) / this.data.maxSpeed - 1 + meterStart.x,
+    //   meterStart.y + 10
+    // );
+    // this.target.fill();
   }
 }
