@@ -1,8 +1,7 @@
-import { compileFunction } from "vm";
 import { Arc, Path, Point } from "./geometry";
-import { Cursor, Pellet } from "./model";
+import { Cursor } from "./model";
 
-export function gameSize(uiHeight = 80): [number, number] {
+export function gameSize(): [number, number] {
   let width: number;
   let height: number;
 
@@ -11,6 +10,8 @@ export function gameSize(uiHeight = 80): [number, number] {
 
   const dispHeight = document.documentElement.clientHeight;
   const dispWidth = document.documentElement.clientWidth;
+
+  const uiHeight = document.getElementById("ui")?.clientHeight as number;
 
   if ((dispHeight - uiHeight) / dispWidth < ratio) {
     height = Math.min(maxWidth, dispHeight - uiHeight);
@@ -29,25 +30,33 @@ export class Canvas {
   element: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
 
-  constructor(id: string, width: number, height: number) {
+  constructor(id: string, width?: number, height?: number) {
     this.element = document.getElementById(id) as HTMLCanvasElement;
-    this.setSize(width, height);
-  }
+    this.context = this.element.getContext("2d") as CanvasRenderingContext2D;
 
-  setSize(width: number, height: number) {
+    if (width === undefined) {
+      width = this.element.clientWidth;
+    }
+    if (height === undefined) {
+      height = this.element.clientHeight;
+    }
+
     this.width = width;
     this.height = height;
 
-    this.element.style.width = `${width}px`;
-    this.element.style.height = `${height}px`;
+    this.setSize();
+  }
+
+  setSize() {
+    this.element.style.width = `${this.width}px`;
+    this.element.style.height = `${this.height}px`;
 
     // Scale for high resolution displays
     const dpr = window.devicePixelRatio;
-    this.element.width = Math.floor(width * dpr);
-    this.element.height = Math.floor(height * dpr);
+    this.element.width = Math.floor(this.width * dpr);
+    this.element.height = Math.floor(this.height * dpr);
 
     // scale the output
-    this.context = this.element.getContext("2d") as CanvasRenderingContext2D;
     this.context.scale(dpr, dpr);
   }
 

@@ -1,7 +1,9 @@
 import { SpeedSnek } from "./speedSnek";
 
-let speedSnek = new SpeedSnek();
-speedSnek.gameLoop();
+window.addEventListener("load", () => {
+  let speedSnek = new SpeedSnek();
+  speedSnek.gameLoop();
+});
 
 // let model: Model;
 // let cursor: Cursor;

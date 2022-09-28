@@ -1,5 +1,5 @@
 import { Arc, dist, intersection } from "./geometry";
-import { Cursor, Model, Pellet, Snek } from "./model";
+import { Model, Pellet, Snek } from "./model";
 import {
   Canvas,
   CanvasCircle,
@@ -21,7 +21,7 @@ export class SpeedSnek {
 
   // game model
   public model: Model;
-  public cursor: Cursor;
+  // public cursor: Cursor;
   public snek: Snek;
   public pellet: Pellet;
 
@@ -33,19 +33,16 @@ export class SpeedSnek {
 
   constructor() {
     // initialize canvas
-    const uiHeight = 80;
-    const [width, height] = gameSize(uiHeight);
-    this.speedCanvas = new Canvas("ui", Math.min(width - 200, 400), 80);
-    this.gameCanvas = new Canvas("game", width, height);
+    this.gameCanvas = new Canvas("game", ...gameSize());
+    const uiElement = document.getElementById("ui") as HTMLElement
+    uiElement.style.width = `${this.gameCanvas.width}px`;
+    this.speedCanvas = new Canvas("speedometer");
 
     // initialize game objects
-    this.cursor = new Cursor(this.gameCanvas.element);
-    this.snek = new Snek({
-      x: this.gameCanvas.width / 2,
-      y: this.gameCanvas.height / 2,
-    });
+    // this.cursor = new Cursor(this.gameCanvas.element);
+    this.snek = new Snek(this.gameCanvas);
     this.pellet = new Pellet(this.gameCanvas.element);
-    this.model = new Model(this.cursor, this.snek, this.pellet);
+    this.model = new Model(this.snek, this.pellet);
 
     // initialize game state
     this.score = 0;
@@ -158,8 +155,6 @@ export class Title extends State {
 
 // UI and snek are live, ready for user input
 export class Ready extends State {
-  cursor: Cursor;
-
   readyArea!: Arc;
   readyAreaGraphics!: CanvasCircle;
 
@@ -177,10 +172,10 @@ export class Ready extends State {
 
   initUiGraphics() {
     const uiContext = this.game.speedCanvas.context;
-    const cursor = this.game.cursor;
+    const snek = this.game.snek;
 
     const uiGraphics = new Composite();
-    const speedGraphics = new SpeedGraphics(cursor, uiContext);
+    const speedGraphics = new SpeedGraphics(snek, uiContext);
 
     uiGraphics.add(speedGraphics);
     this.graphics.add(uiGraphics);
@@ -190,7 +185,6 @@ export class Ready extends State {
     const gameCanvas = this.game.gameCanvas;
     const gameContext = this.game.gameCanvas.context;
 
-    const cursor = this.game.cursor;
     const snek = this.game.snek;
 
     const gameGraphics = new Composite();
@@ -200,10 +194,10 @@ export class Ready extends State {
       "green",
       snek.snekWidth
     );
-    const cursorLine = new CanvasLine(cursor.path, gameContext, "red", 1);
 
     // draw cursor line (if in dev mode) and snek
     if (process.env.NODE_ENV === "development") {
+      const cursorLine = new CanvasLine(snek.rawPath, gameContext, "red", 1);
       gameGraphics.add(cursorLine);
     }
     gameGraphics.add(snekLine);
@@ -254,8 +248,8 @@ export class Set extends State {
   }
 
   public enter(): void {
-    const cursor = this.game.cursor;
-    document.addEventListener("pointermove", cursor.moveHandler);
+    const snek = this.game.snek;
+    document.addEventListener("pointermove", snek.moveHandler);
   }
 
   update() {
@@ -299,13 +293,13 @@ export class Go extends State {
   }
 
   update() {
-    const cursorPath = this.game.cursor.path;
     const snek = this.game.snek;
     const snekPath = snek.path;
+    const cursorPath = snek.rawPath;
     const pellet = this.game.pellet;
 
     // speed check
-    if (this.game.cursor.speed < this.game.speedLimit) {
+    if (snek.speed < this.game.speedLimit) {
       console.log("faster!");
     }
 
@@ -319,9 +313,8 @@ export class Go extends State {
         })
       ) {
         console.log("nom!");
-        snek.grow();
         this.game.increaseScore();
-        pellet.place(snek.path);
+        this.game.model.notify(["eatpellet", this]);
       }
     }
 

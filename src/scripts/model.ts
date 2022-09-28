@@ -1,10 +1,12 @@
 import { dist, intersection, Path, Point } from "./geometry";
+import { Canvas } from "./graphics";
+import { Go } from "./speedSnek";
 
 function randomBetween(min: number, max: number) {
   return Math.random() * (max - min) + min;
 }
 
-type Notification = ["pointermove", Cursor] | ["trimpath", Snek, number];
+type Notification = ["pointermove", Cursor] | ["eatpellet", Go];
 
 interface Mediator {
   notify(notification: Notification): void;
@@ -12,13 +14,10 @@ interface Mediator {
 
 // events are sent here, and the mediator passes them on to the correct handler.
 export class Model implements Mediator {
-  private cursor: Cursor;
   private snek: Snek;
   private pellet: Pellet;
 
-  constructor(cursor: Cursor, snek: Snek, pellet: Pellet) {
-    this.cursor = cursor;
-    this.cursor.setMediator(this);
+  constructor(snek: Snek, pellet: Pellet) {
     this.snek = snek;
     this.snek.setMediator(this);
     this.pellet = pellet;
@@ -30,14 +29,13 @@ export class Model implements Mediator {
 
     switch (event) {
       case "pointermove":
-        this.snek.update(sender);
-        this.cursor.updateSpeed();
+        this.snek.calculateSegments();
+        this.snek.calculateSpeed();
         break;
 
-      case "trimpath":
-        // Only keep enough raw path data to add another snek segment
-        const [, , ix] = notification;
-        this.cursor.trim(ix);
+      case "eatpellet":
+        this.snek.grow();
+        this.pellet.place(this.snek.path);
         break;
 
       default:
@@ -78,42 +76,40 @@ abstract class Component {
 }
 
 export class Cursor extends Component {
-  target: HTMLCanvasElement;
-  path: Path;
+  canvas: Canvas;
+  rawPath: Path;
   timeStamp: number[];
   rawSpeed: number;
-  speed: number;
 
-  constructor(target: HTMLCanvasElement) {
+  constructor(canvas: Canvas) {
     super();
-    this.target = target;
-    this.path = [];
+    this.canvas = canvas;
+    this.rawPath = [];
     this.timeStamp = [];
     this.rawSpeed = 0;
-    this.speed = 0;
     this.moveHandler = this.moveHandler.bind(this);
   }
 
   public moveHandler(e: PointerEvent) {
-    const gameWrapper = this.target.parentElement as HTMLElement;
+    const gameWrapper = this.canvas.element.parentElement as HTMLElement;
 
     const point = {
       x: e.x - gameWrapper.offsetLeft - gameWrapper.clientLeft,
       y: e.y - gameWrapper.offsetTop - gameWrapper.clientTop,
     };
 
-    this.path.unshift(point);
+    this.rawPath.unshift(point);
     this.timeStamp.unshift(e.timeStamp);
     this.mediator.notify(["pointermove", this]);
   }
 
   public trim(ix: number) {
-    this.path.splice(ix);
+    this.rawPath.splice(ix);
     this.timeStamp.splice(ix);
   }
 
   public getSpeed(window = 6) {
-    window = Math.min(window, this.path.length - 1);
+    window = Math.min(window, this.rawPath.length - 1);
     if (window < 2) {
       return 0;
     }
@@ -121,7 +117,7 @@ export class Cursor extends Component {
     let travelled = 0;
     let time = 0;
     for (let i = 0; i < window; i++) {
-      travelled += dist(this.path[i], this.path[i + 1]);
+      travelled += dist(this.rawPath[i], this.rawPath[i + 1]);
       time += this.timeStamp[i] - this.timeStamp[i + 1];
     }
 
@@ -129,27 +125,30 @@ export class Cursor extends Component {
   }
 
   public updateSpeed() {
-    const alpha = 0.05;
     this.rawSpeed = this.getSpeed();
-    if (this.rawSpeed !== NaN) {
-      this.speed = alpha * this.rawSpeed + (1 - alpha) * this.speed;
-    }
   }
 }
 
-export class Snek extends Component {
+export class Snek extends Cursor {
   segments: number;
   segLength: number;
   path: Path;
   snekWidth: number;
+  speed: number;
 
-  constructor(startLoc: Point) {
-    super();
+  constructor(canvas: Canvas) {
+    super(canvas);
+
     this.segments = 4;
     this.segLength = 50;
     this.snekWidth = 10;
-
-    this.path = [startLoc];
+    this.speed = 0;
+    this.path = [
+      {
+        x: this.canvas.width / 2,
+        y: this.canvas.height / 2,
+      },
+    ];
     for (let i = 0; i < this.segments; i++) {
       const nextSeg = {
         x: this.path[i].x,
@@ -160,14 +159,13 @@ export class Snek extends Component {
     }
   }
 
-  public update(cursor: Cursor) {
-    const cursorPath = cursor.path;
-    Object.assign(this.path, cursorPath, { length: 1 });
+  public calculateSegments() {
+    Object.assign(this.path, this.rawPath, { length: 1 });
     let segHead = this.path[this.path.length - 1];
-    for (let [ix, p] of cursorPath.entries()) {
+    for (let [ix, p] of this.rawPath.entries()) {
       if (this.path.length <= this.segments) {
         while (this.segLength < dist(segHead, p)) {
-          const seg = [cursorPath[ix - 1], p];
+          const seg = [this.rawPath[ix - 1], p];
           const arc = {
             center: segHead,
             radius: this.segLength,
@@ -180,10 +178,18 @@ export class Snek extends Component {
         }
       } else {
         if (this.segLength * 2 <= dist(segHead, p)) {
-          this.mediator.notify(["trimpath", this, ix]);
-          break;
+          super.trim(ix);
         }
       }
+    }
+  }
+
+  public calculateSpeed() {
+    this.updateSpeed();
+
+    const alpha = 0.05;
+    if (this.rawSpeed !== NaN) {
+      this.speed = alpha * this.rawSpeed + (1 - alpha) * this.speed;
     }
   }
 
