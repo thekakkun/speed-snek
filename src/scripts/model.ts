@@ -35,28 +35,12 @@ export class Model implements Mediator {
 
       case "eatpellet":
         this.snek.grow();
-        this.pellet.place(this.snek.path);
+        this.pellet.place(this.snek.segmentPath);
         break;
 
       default:
         const _exhaustiveCheck: never = sender;
         return _exhaustiveCheck;
-    }
-  }
-
-  gameOver(reason: Notification[0], cursor: Cursor) {
-    const message = {
-      hitself: "You crashed into yourself!",
-      hitwall: "You crashed into a wall!",
-      tooslow: "You were too slow!",
-    };
-
-    localStorage.setItem("bestScore", String("this.bestScore"));
-
-    if (process.env.NODE_ENV === "production") {
-      document.removeEventListener("pointermove", cursor.moveHandler);
-      alert(`Game Over!\n${message[reason]}\nYour score: ${this.score}`);
-      location.reload();
     }
   }
 }
@@ -77,14 +61,14 @@ abstract class Component {
 
 export class Cursor extends Component {
   canvas: Canvas;
-  rawPath: Path;
+  path: Path;
   timeStamp: number[];
   rawSpeed: number;
 
   constructor(canvas: Canvas) {
     super();
     this.canvas = canvas;
-    this.rawPath = [];
+    this.path = [];
     this.timeStamp = [];
     this.rawSpeed = 0;
     this.moveHandler = this.moveHandler.bind(this);
@@ -98,18 +82,18 @@ export class Cursor extends Component {
       y: e.y - gameWrapper.offsetTop - gameWrapper.clientTop,
     };
 
-    this.rawPath.unshift(point);
+    this.path.unshift(point);
     this.timeStamp.unshift(e.timeStamp);
     this.mediator.notify(["pointermove", this]);
   }
 
   public trim(ix: number) {
-    this.rawPath.splice(ix);
+    this.path.splice(ix);
     this.timeStamp.splice(ix);
   }
 
   public getSpeed(window = 6) {
-    window = Math.min(window, this.rawPath.length - 1);
+    window = Math.min(window, this.path.length - 1);
     if (window < 2) {
       return 0;
     }
@@ -117,7 +101,7 @@ export class Cursor extends Component {
     let travelled = 0;
     let time = 0;
     for (let i = 0; i < window; i++) {
-      travelled += dist(this.rawPath[i], this.rawPath[i + 1]);
+      travelled += dist(this.path[i], this.path[i + 1]);
       time += this.timeStamp[i] - this.timeStamp[i + 1];
     }
 
@@ -132,7 +116,7 @@ export class Cursor extends Component {
 export class Snek extends Cursor {
   segments: number;
   segLength: number;
-  path: Path;
+  segmentPath: Path;
   snekWidth: number;
   speed: number;
 
@@ -143,7 +127,7 @@ export class Snek extends Cursor {
     this.segLength = 50;
     this.snekWidth = 10;
     this.speed = 0;
-    this.path = [
+    this.segmentPath = [
       {
         x: this.canvas.width / 2,
         y: this.canvas.height / 2,
@@ -151,28 +135,28 @@ export class Snek extends Cursor {
     ];
     for (let i = 0; i < this.segments; i++) {
       const nextSeg = {
-        x: this.path[i].x,
-        y: this.path[i].y + this.segLength,
+        x: this.segmentPath[i].x,
+        y: this.segmentPath[i].y + this.segLength,
       };
 
-      this.path.push(nextSeg);
+      this.segmentPath.push(nextSeg);
     }
   }
 
   public calculateSegments() {
-    Object.assign(this.path, this.rawPath, { length: 1 });
-    let segHead = this.path[this.path.length - 1];
-    for (let [ix, p] of this.rawPath.entries()) {
-      if (this.path.length <= this.segments) {
+    Object.assign(this.segmentPath, this.path, { length: 1 });
+    let segHead = this.segmentPath[this.segmentPath.length - 1];
+    for (let [ix, p] of this.path.entries()) {
+      if (this.segmentPath.length <= this.segments) {
         while (this.segLength < dist(segHead, p)) {
-          const seg = [this.rawPath[ix - 1], p];
+          const seg = [this.path[ix - 1], p];
           const arc = {
             center: segHead,
             radius: this.segLength,
           };
           segHead = intersection(seg, arc) as Point;
-          this.path.push(segHead);
-          if (this.segments < this.path.length) {
+          this.segmentPath.push(segHead);
+          if (this.segments < this.segmentPath.length) {
             break;
           }
         }
@@ -201,12 +185,12 @@ export class Snek extends Cursor {
 export class Pellet extends Component {
   target: HTMLCanvasElement;
   loc: Point;
-  r: number;
+  radius: number;
 
   constructor(target: HTMLCanvasElement) {
     super();
 
-    this.r = 15;
+    this.radius = 15;
     this.target = target;
     this.loc = Object.create({});
   }
@@ -239,7 +223,7 @@ export class Pellet extends Component {
         if (
           intersection([noGo[i], noGo[i + 1]], {
             center: loc,
-            radius: this.r + buffer,
+            radius: this.radius + buffer,
           })
         ) {
           // loc is too close to noGo, try again.

@@ -1,4 +1,4 @@
-import { Arc, dist, intersection, Point } from "./geometry";
+import { Arc, dist, intersection } from "./geometry";
 import { Model, Pellet, Snek } from "./model";
 import {
   Canvas,
@@ -71,6 +71,19 @@ export class SpeedSnek {
     this.score += 1;
     this.bestScore = Math.max(this.bestScore, this.score);
     this.speedLimit = Math.min(this.speedLimit + 0.05, this.maxSpeed);
+  }
+
+  public restart() {
+    this.snek = new Snek(this.gameCanvas);
+    this.pellet = new Pellet(this.gameCanvas.element);
+    this.model = new Model(this.snek, this.pellet);
+
+    // initialize game state
+    this.score = 0;
+    const bestScore = localStorage.getItem("bestScore");
+    this.bestScore = bestScore ? Number(bestScore) : 0;
+    this.speedLimit = 0;
+    this.maxSpeed = 5;
   }
 
   public gameLoop() {
@@ -182,7 +195,7 @@ export class Ready extends State {
 
     const gameGraphics = new Composite();
     const snekLine = new CanvasLine(
-      snek.path,
+      snek.segmentPath,
       gameContext,
       "green",
       snek.snekWidth
@@ -190,7 +203,12 @@ export class Ready extends State {
 
     // draw cursor line (if in dev mode) and snek
     if (process.env.NODE_ENV === "development") {
-      const cursorLine = new CanvasLine(snek.rawPath, gameContext, "red", 1);
+      const cursorLine = new CanvasLine(
+        snek.segmentPath,
+        gameContext,
+        "red",
+        1
+      );
       gameGraphics.add(cursorLine);
     }
     gameGraphics.add(snekLine);
@@ -251,6 +269,7 @@ export class Set extends State {
 
     this.messageElement.innerText = String(countStart - Math.floor(elapsed));
 
+    // TODO: Check if finger has left screen on phone
     if (countStart < elapsed) {
       this.game.transitionTo(new Go(this.graphics));
     }
@@ -273,12 +292,12 @@ export class Go extends State {
 
     const pellet = this.game.pellet;
     const snek = this.game.snek;
-    pellet.place(snek.path);
+    pellet.place(snek.segmentPath);
 
     const gameContext = this.game.gameCanvas.context;
     this.graphics.add(
       new CanvasDisc(
-        { center: this.game.pellet.loc!, radius: this.game.pellet.r },
+        { center: this.game.pellet.loc!, radius: this.game.pellet.radius },
         gameContext,
         "blue"
       )
@@ -287,13 +306,14 @@ export class Go extends State {
 
   update() {
     const snek = this.game.snek;
-    const snekPath = snek.path;
-    const cursorPath = snek.rawPath;
+    const snekPath = snek.segmentPath;
+    const cursorPath = snek.segmentPath;
     const pellet = this.game.pellet;
 
     // speed check
     if (snek.speed < this.game.speedLimit) {
       console.log("faster!");
+      this.game.transitionTo(new GameOver("You were too slow!"));
     }
 
     // snek vs. pellet collision
@@ -302,7 +322,7 @@ export class Go extends State {
         2 <= cursorPath.length &&
         intersection([cursorPath[0], cursorPath[1]], {
           center: pellet.loc,
-          radius: pellet.r + snek.snekWidth / 2,
+          radius: pellet.radius + snek.snekWidth / 2,
         })
       ) {
         console.log("nom!");
@@ -320,6 +340,7 @@ export class Go extends State {
       gameElement.clientHeight - 1 <= snekPath[0].y
     ) {
       console.log("whoops!");
+      this.game.transitionTo(new GameOver("You crashed into a wall!"));
     }
 
     // snek vs. snek collision
@@ -328,7 +349,7 @@ export class Go extends State {
         intersection([snekPath[0], snekPath[1]], [snekPath[i], snekPath[i + 1]])
       ) {
         console.log("ouch!");
-        break;
+        this.game.transitionTo(new GameOver("You crashed into yourself!"));
       }
     }
   }
@@ -342,11 +363,20 @@ export class GameOver extends State {
 
   constructor(reason: string) {
     super();
-
     this.reason = reason;
   }
 
-  public enter(): void {}
+  public enter(): void {
+    document.removeEventListener("pointermove", this.game.snek.moveHandler);
+    localStorage.setItem("bestScore", String(this.game.bestScore));
 
-  public exit(): void {}
+    // if (process.env.NODE_ENV === "production") {
+    alert(`Game Over!\n${this.reason}\nYour score: ${this.game.score}`);
+    this.game.transitionTo(new Ready());
+    // }
+  }
+
+  public exit(): void {
+    this.game.restart();
+  }
 }
