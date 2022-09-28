@@ -1,4 +1,4 @@
-import { Arc, dist, intersection } from "./geometry";
+import { Arc, dist, intersection, Point } from "./geometry";
 import { Model, Pellet, Snek } from "./model";
 import {
   Canvas,
@@ -34,7 +34,7 @@ export class SpeedSnek {
   constructor() {
     // initialize canvas
     this.gameCanvas = new Canvas("game", ...gameSize());
-    const uiElement = document.getElementById("ui") as HTMLElement
+    const uiElement = document.getElementById("ui") as HTMLElement;
     uiElement.style.width = `${this.gameCanvas.width}px`;
     this.speedCanvas = new Canvas("speedometer");
 
@@ -70,7 +70,7 @@ export class SpeedSnek {
   public increaseScore() {
     this.score += 1;
     this.bestScore = Math.max(this.bestScore, this.score);
-    this.speedLimit += Math.min(this.speedLimit + 0.05, this.maxSpeed);
+    this.speedLimit = Math.min(this.speedLimit + 0.05, this.maxSpeed);
   }
 
   public gameLoop() {
@@ -80,6 +80,11 @@ export class SpeedSnek {
   }
 
   public update(): void {
+    const currentScore = document.getElementById("currentScore") as HTMLElement;
+    currentScore.innerHTML = `Score: ${String(this.score).padStart(2, "\xa0")}`;
+
+    const bestScore = document.getElementById("bestScore") as HTMLElement;
+    bestScore.innerHTML = `Best: ${String(this.bestScore).padStart(2, "\xa0")}`;
     this.state.update();
   }
 
@@ -87,16 +92,6 @@ export class SpeedSnek {
     this.gameCanvas.clear();
     this.speedCanvas.clear();
     this.state.render();
-    this.drawScore();
-  }
-
-  public drawScore(): void {
-    const currentScore = document.getElementById("currentScore") as HTMLElement;
-    currentScore.innerHTML = `Score: ${String(this.score).padStart(2, "\xa0")}`;
-
-    const bestScore = document.getElementById("bestScore") as HTMLElement;
-
-    bestScore.innerHTML = `Best: ${String(this.bestScore).padStart(2, "\xa0")}`;
   }
 }
 
@@ -171,14 +166,12 @@ export class Ready extends State {
   }
 
   initUiGraphics() {
-    const uiContext = this.game.speedCanvas.context;
-    const snek = this.game.snek;
+    const speedCanvas = this.game.speedCanvas;
+    const speedContext = speedCanvas.context;
 
-    const uiGraphics = new Composite();
-    const speedGraphics = new SpeedGraphics(snek, uiContext);
+    const speedGraphics = new SpeedGraphics(this.game, speedContext);
 
-    uiGraphics.add(speedGraphics);
-    this.graphics.add(uiGraphics);
+    this.graphics.add(speedGraphics);
   }
 
   initGameGraphics() {

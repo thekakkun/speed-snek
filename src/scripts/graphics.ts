@@ -1,5 +1,6 @@
 import { Arc, Path, Point } from "./geometry";
-import { Cursor } from "./model";
+import { Snek } from "./model";
+import { SpeedSnek } from "./speedSnek";
 
 export function gameSize(): [number, number] {
   let width: number;
@@ -223,55 +224,70 @@ export class CanvasRect extends GraphicsComponent<[Point, Point]> {
   }
 }
 
-export class SpeedGraphics extends GraphicsComponent<Cursor> {
-  constructor(data: Cursor, target: CanvasRenderingContext2D) {
+export class SpeedGraphics extends GraphicsComponent<SpeedSnek> {
+  composite: Composite;
+
+  constructor(data: SpeedSnek, target: CanvasRenderingContext2D) {
+    super(data, target);
+    this.composite = new Composite();
+  }
+
+  render() {
+    // speedometer background
+    const speedCanvas = this.data.speedCanvas;
+    const background = new CanvasRect(
+      [
+        { x: 0, y: 0 },
+        { x: speedCanvas.width, y: speedCanvas.height },
+      ],
+      speedCanvas.context,
+      "#eee"
+    );
+
+    // speed limit
+    const speedLimit = new CanvasRect(
+      [
+        { x: 0, y: 0 },
+        {
+          x: (speedCanvas.width * this.data.speedLimit) / this.data.maxSpeed,
+          y: speedCanvas.height,
+        },
+      ],
+      speedCanvas.context,
+      "orangered"
+    );
+
+    // speed indicator
+    const indicator = new IndicatorGraphics(this.data, speedCanvas.context);
+
+    this.composite.add(background);
+    this.composite.add(speedLimit);
+    this.composite.add(indicator);
+
+    return this.composite.render();
+  }
+}
+
+export class IndicatorGraphics extends GraphicsComponent<SpeedSnek> {
+  constructor(data: SpeedSnek, target: CanvasRenderingContext2D) {
     super(data, target);
   }
 
   render() {
-    const padding = 10;
-    const meterStart = {
-      x: padding,
-      y: padding,
-    };
-    const meterSize = {
-      x: this.target.canvas.clientWidth - meterStart.x,
-      y: this.target.canvas.clientHeight - padding * 2,
-    };
+    const speedCanvas = this.data.speedCanvas;
+    const speed = Math.min(this.data.snek.speed, this.data.maxSpeed);
+    const indicatorLoc = (speedCanvas.width * speed) / this.data.maxSpeed;
 
-    // Speedometer background
-    this.target.fillStyle = "#eee";
-    this.target.fillRect(meterStart.x, meterStart.y, meterSize.x, meterSize.y);
-
-    // // Speed limit
-    // this.target.fillStyle = "orangeRed";
-    // this.target.fillRect(
-    //   meterStart.x,
-    //   meterStart.y,
-    //   (meterSize.x * this.data.speedLimit) / this.data.maxSpeed,
-    //   meterSize.y
-    // );
-
-    // // Speedometer needle
-    // const speed = Math.min(this.data.speed, this.data.maxSpeed);
-    // this.target.fillStyle = "green";
-    // this.target.beginPath();
-    // this.target.moveTo(
-    //   (meterSize.x * speed) / this.data.maxSpeed - 5 + meterStart.x,
-    //   meterStart.y + meterSize.y
-    // );
-    // this.target.lineTo(
-    //   (meterSize.x * speed) / this.data.maxSpeed + 5 + meterStart.x,
-    //   meterStart.y + meterSize.y
-    // );
-    // this.target.lineTo(
-    //   (meterSize.x * speed) / this.data.maxSpeed + 1 + meterStart.x,
-    //   meterStart.y + 10
-    // );
-    // this.target.lineTo(
-    //   (meterSize.x * speed) / this.data.maxSpeed - 1 + meterStart.x,
-    //   meterStart.y + 10
-    // );
-    // this.target.fill();
+    this.target.fillStyle = "green";
+    this.target.beginPath();
+    // left base
+    this.target.moveTo(indicatorLoc - 5, this.data.speedCanvas.height);
+    // right base
+    this.target.lineTo(indicatorLoc + 5, this.data.speedCanvas.height);
+    // right tip
+    this.target.lineTo(indicatorLoc + 1, 10);
+    // left tip
+    this.target.lineTo(indicatorLoc - 1, 10);
+    this.target.fill();
   }
 }
