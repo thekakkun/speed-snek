@@ -17,15 +17,53 @@
   </head>
 
   <body>
-    <div class="speedSnek">
-      <div class="speedSnek__ui">
-        <div class="score">
-          <p id="currentScore" class="score__current">Score:</p>
-          <p id="bestScore" class="score__best">Best:</p>
+    <div id="info" class="info">
+      <div class="info__content">
+        <div id="startMessage" class="content__start">
+          <h1>Welcome to Speed Snek!</h1>
+          <h2>Instructions:</h2>
+          <ul>
+            <li>Control the snek with your mouse or finger</li>
+            <li>
+              Eating pellets will increase:
+              <ul>
+                <li>your score</li>
+                <li>the length of your snek</li>
+                <li>the minimum speed limit</li>
+              </ul>
+            </li>
+            <li>
+              Game over if you:
+              <ul>
+                <li>Hit yourself</li>
+                <li>Hit the wall</li>
+                <li>Go under the minimum speed limit</li>
+              </ul>
+            </li>
+          </ul>
+          <button id="startButton">Start!</button>
         </div>
-        <canvas id="ui" class="ui__speedometer"></canvas>
+        <div id="endMessage" class="content__end">
+          <h1>Game over!</h1>
+          <p id="reason"></p>
+          <p id="score"></p>
+          <p id="best"></p>
+          <button id="restartButton">Play again!</button>
+        </div>
       </div>
-      <canvas id="game" class="speedSnek__game"></canvas>
+    </div>
+    <div class="speedSnek">
+      <div id="ui" class="speedSnek__ui">
+        <div class="score">
+          <p id="currentScore" class="score__current"></p>
+          <p id="bestScore" class="score__best"></p>
+        </div>
+        <canvas id="speedometer" class="ui__speedometer"></canvas>
+      </div>
+      <div id="game" class="speedSnek__game">
+        <p id="message" class="game__message"></p>
+        <canvas id="gameBoard" class="game__board"> </canvas>
+      </div>
     </div>
   </body>
 </html>

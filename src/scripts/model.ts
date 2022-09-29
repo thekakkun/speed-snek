@@ -1,37 +1,24 @@
 import { dist, intersection, Path, Point } from "./geometry";
+import { Canvas } from "./graphics";
+import { Go } from "./speedSnek";
 
 function randomBetween(min: number, max: number) {
   return Math.random() * (max - min) + min;
 }
 
-type Notification =
-  | ["pointermove", Cursor]
-  | ["trimpath", Snek, number]
-  | ["eatpellet", Cursor]
-  | ["hitself", Cursor]
-  | ["hitwall", Cursor]
-  | ["tooslow", Cursor];
+type Notification = ["pointermove", Cursor] | ["eatpellet", Go];
 
 interface Mediator {
   notify(notification: Notification): void;
 }
 
 // events are sent here, and the mediator passes them on to the correct handler.
+// TODO: I don't think this is necessary anymore...
 export class Model implements Mediator {
-  public score: number;
-  public bestScore: number;
-
-  private cursor: Cursor;
   private snek: Snek;
   private pellet: Pellet;
 
-  constructor(cursor: Cursor, snek: Snek, pellet: Pellet) {
-    this.score = 0;
-    const bestScore = localStorage.getItem("bestScore");
-    this.bestScore = bestScore ? Number(bestScore) : 0;
-
-    this.cursor = cursor;
-    this.cursor.setMediator(this);
+  constructor(snek: Snek, pellet: Pellet) {
     this.snek = snek;
     this.snek.setMediator(this);
     this.pellet = pellet;
@@ -43,64 +30,18 @@ export class Model implements Mediator {
 
     switch (event) {
       case "pointermove":
-        this.snek.update(sender);
-        this.cursor.updateSpeed();
-        this.cursor.checkCollision(this.snek, this.pellet);
-        break;
-
-      case "trimpath":
-        // Only keep enough raw path data to add another snek segment
-        const [, , ix] = notification;
-        this.cursor.trim(ix);
+        this.snek.calculateSegments();
+        this.snek.calculateSpeed();
         break;
 
       case "eatpellet":
-        console.log("nom!");
         this.snek.grow();
-        this.increaseScore();
-        this.cursor.increaseSpeed();
-        this.pellet.place(this.snek.path);
-        break;
-
-      case "hitself":
-        console.log("ouch!");
-        this.gameOver(...notification);
-        break;
-
-      case "hitwall":
-        console.log("whoops!");
-        this.gameOver(...notification);
-        break;
-
-      case "tooslow":
-        console.log("faster!");
-        this.gameOver(...notification);
+        this.pellet.place(this.snek.segmentPath);
         break;
 
       default:
         const _exhaustiveCheck: never = sender;
         return _exhaustiveCheck;
-    }
-  }
-
-  increaseScore() {
-    this.score += 1;
-    this.bestScore = Math.max(this.bestScore, this.score);
-  }
-
-  gameOver(reason: Notification[0], cursor: Cursor) {
-    const message = {
-      hitself: "You crashed into yourself!",
-      hitwall: "You crashed into a wall!",
-      tooslow: "You were too slow!",
-    };
-
-    localStorage.setItem("bestScore", String(this.bestScore));
-
-    if (process.env.NODE_ENV === "production") {
-      document.removeEventListener("pointermove", cursor.moveHandler);
-      alert(`Game Over!\n${message[reason]}\nYour score: ${this.score}`);
-      location.reload();
     }
   }
 }
@@ -120,32 +61,24 @@ abstract class Component {
 }
 
 export class Cursor extends Component {
-  target: HTMLCanvasElement;
+  canvas: Canvas;
   path: Path;
   timeStamp: number[];
-  speed: number;
-  smoothSpeed: number;
-  speedLimit: number;
-  speedIncrease: number;
-  maxSpeed: number;
+  rawSpeed: number;
 
-  constructor(target: HTMLCanvasElement) {
+  constructor(canvas: Canvas) {
     super();
-    this.target = target;
+    this.canvas = canvas;
     this.path = [];
     this.timeStamp = [];
-    this.speed = 0;
-    this.smoothSpeed = 0;
-    this.speedLimit = 0;
-    this.speedIncrease = 0.05;
-    this.maxSpeed = 5;
+    this.rawSpeed = 0;
     this.moveHandler = this.moveHandler.bind(this);
   }
 
   public moveHandler(e: PointerEvent) {
     const point = {
-      x: e.x - this.target.offsetLeft,
-      y: e.y - this.target.offsetTop,
+      x: e.x - this.canvas.element.getBoundingClientRect().x,
+      y: e.y - this.canvas.element.getBoundingClientRect().y,
     };
 
     this.path.unshift(point);
@@ -175,109 +108,71 @@ export class Cursor extends Component {
   }
 
   public updateSpeed() {
-    const alpha = 0.1;
-    this.speed = this.getSpeed();
-    if (this.speed !== NaN) {
-      this.smoothSpeed = alpha * this.speed + (1 - alpha) * this.smoothSpeed;
-    }
-
-    if (this.smoothSpeed < this.speedLimit) {
-      this.mediator.notify(["tooslow", this]);
-    }
-  }
-
-  public increaseSpeed() {
-    this.speedLimit = Math.min(
-      this.speedLimit + this.speedIncrease,
-      this.maxSpeed
-    );
-  }
-
-  public checkCollision(snek: Snek, pellet: Pellet) {
-    // snek vs pellet collisions
-    if (pellet.loc) {
-      if (
-        2 <= this.path.length &&
-        intersection([this.path[0], this.path[1]], {
-          center: pellet.loc,
-          radius: pellet.r + snek.snekWidth / 2,
-        })
-      ) {
-        this.mediator.notify(["eatpellet", this]);
-      }
-    }
-
-    // // snek vs wall collisions
-    if (
-      this.path[0].x - 1 <= 0 ||
-      this.target.clientWidth - 1 <= this.path[0].x ||
-      this.path[0].y - 1 <= 0 ||
-      this.target.clientHeight - 1 <= this.path[0].y
-    ) {
-      this.mediator.notify(["hitwall", this]);
-    }
-
-    // snek vs snek collisions
-    for (let i = 2; i < snek.path.length - 1; i++) {
-      if (
-        intersection(
-          [snek.path[0], snek.path[1]],
-          [snek.path[i], snek.path[i + 1]]
-        )
-      ) {
-        this.mediator.notify(["hitself", this]);
-      }
-    }
+    this.rawSpeed = this.getSpeed();
   }
 }
 
-export class Snek extends Component {
+export class Snek extends Cursor {
   segments: number;
   segLength: number;
-  path: Path;
+  segmentPath: Path;
   snekWidth: number;
+  speed: number;
 
-  constructor(startLoc: Point) {
-    super();
+  constructor(canvas: Canvas) {
+    super(canvas);
+
     this.segments = 4;
     this.segLength = 50;
     this.snekWidth = 10;
-
-    this.path = [startLoc];
+    this.speed = 0;
+    this.segmentPath = [
+      {
+        x: this.canvas.width / 2,
+        y: this.canvas.height / 2,
+      },
+    ];
     for (let i = 0; i < this.segments; i++) {
       const nextSeg = {
-        x: this.path[i].x,
-        y: this.path[i].y + this.segLength,
+        x: this.segmentPath[i].x,
+        y: this.segmentPath[i].y + this.segLength,
       };
 
-      this.path.push(nextSeg);
+      this.segmentPath.push(nextSeg);
     }
   }
 
-  public update(cursor: Cursor) {
-    const cursorPath = cursor.path;
-    this.path = [cursorPath[0]];
-    let segHead = this.path[this.path.length - 1];
-    for (let [ix, p] of cursorPath.entries()) {
-      if (this.path.length <= this.segments) {
+  public calculateSegments() {
+    Object.assign(this.segmentPath, this.path, { length: 1 });
+    let segHead = this.segmentPath[this.segmentPath.length - 1];
+    for (let [ix, p] of this.path.entries()) {
+      if (this.segmentPath.length <= this.segments) {
         while (this.segLength < dist(segHead, p)) {
-          const seg = [cursorPath[ix - 1], p];
+          const seg = [this.path[ix - 1], p];
           const arc = {
             center: segHead,
             radius: this.segLength,
           };
           segHead = intersection(seg, arc) as Point;
-          this.path.push(segHead);
-          if (this.segments < this.path.length) {
+          this.segmentPath.push(segHead);
+          if (this.segments < this.segmentPath.length) {
             break;
           }
         }
       } else {
         if (this.segLength * 2 <= dist(segHead, p)) {
-          this.mediator.notify(["trimpath", this, ix]);
-          break;
+          super.trim(ix);
         }
       }
+    }
+  }
+
+  public calculateSpeed() {
+    this.updateSpeed();
+
+    const alpha = 0.05;
+    if (this.rawSpeed !== NaN) {
+      this.speed = alpha * this.rawSpeed + (1 - alpha) * this.speed;
     }
   }
 
@@ -288,15 +183,15 @@ export class Snek extends Component {
 
 export class Pellet extends Component {
   target: HTMLCanvasElement;
-  loc: Point | null;
-  r: number;
+  loc: Point;
+  radius: number;
 
-  constructor(target: HTMLCanvasElement, noGo: Path) {
+  constructor(target: HTMLCanvasElement) {
     super();
 
-    this.r = 15;
+    this.radius = 15;
     this.target = target;
-    this.place(noGo);
+    this.loc = Object.create({});
   }
 
   // Choose random point within target until
@@ -327,7 +222,7 @@ export class Pellet extends Component {
         if (
           intersection([noGo[i], noGo[i + 1]], {
             center: loc,
-            radius: this.r + buffer,
+            radius: this.radius + buffer,
           })
         ) {
           // loc is too close to noGo, try again.
@@ -337,7 +232,8 @@ export class Pellet extends Component {
       }
 
       if (locValid) {
-        this.loc = loc;
+        Object.assign(this.loc!, loc);
+        // this.loc = loc;
         break;
       }
     }
