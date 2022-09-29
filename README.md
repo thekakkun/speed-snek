@@ -29,6 +29,7 @@ This project was used to teach myself about:
 
 ## Todo
 
+
 - [ ] Tweak the difficulty curve, consider adding lives maybe?
 - [ ] Maybe different kinds of food pellets? Power-ups?
 - [x] Figure out scaling on phone screens
