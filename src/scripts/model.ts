@@ -13,6 +13,7 @@ interface Mediator {
 }
 
 // events are sent here, and the mediator passes them on to the correct handler.
+// TODO: I don't think this is necessary anymore...
 export class Model implements Mediator {
   private snek: Snek;
   private pellet: Pellet;
@@ -75,11 +76,9 @@ export class Cursor extends Component {
   }
 
   public moveHandler(e: PointerEvent) {
-    const gameWrapper = this.canvas.element.parentElement as HTMLElement;
-
     const point = {
-      x: e.x - gameWrapper.offsetLeft - gameWrapper.clientLeft,
-      y: e.y - gameWrapper.offsetTop - gameWrapper.clientTop,
+      x: e.x - this.canvas.element.getBoundingClientRect().x,
+      y: e.y - this.canvas.element.getBoundingClientRect().y,
     };
 
     this.path.unshift(point);

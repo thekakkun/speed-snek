@@ -1,5 +1,4 @@
 import { Arc, Path, Point } from "./geometry";
-import { Snek } from "./model";
 import { SpeedSnek } from "./speedSnek";
 
 export function gameSize(): [number, number] {
@@ -7,18 +6,21 @@ export function gameSize(): [number, number] {
   let height: number;
 
   const ratio = 1.5;
-  const maxWidth = 600;
+  const maxSide = 600;
+  const borderWidth = parseInt(
+    getComputedStyle(document.getElementById("game") as HTMLElement).borderWidth
+  );
 
   const dispHeight = document.documentElement.clientHeight;
   const dispWidth = document.documentElement.clientWidth;
 
   const uiHeight = document.getElementById("ui")?.clientHeight as number;
 
-  if ((dispHeight - uiHeight) / dispWidth < ratio) {
-    height = Math.min(maxWidth, dispHeight - uiHeight);
+  if ((dispHeight - uiHeight) / dispWidth < 1) {
+    height = Math.min(maxSide, dispHeight - uiHeight - borderWidth * 2);
     width = height * ratio;
   } else {
-    width = Math.min(maxWidth, dispWidth);
+    width = Math.min(maxSide, dispWidth - borderWidth * 2);
     height = width * ratio;
   }
 

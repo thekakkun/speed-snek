@@ -21,7 +21,6 @@ export class SpeedSnek {
 
   // game model
   public model: Model;
-  // public cursor: Cursor;
   public snek: Snek;
   public pellet: Pellet;
 
@@ -33,7 +32,7 @@ export class SpeedSnek {
 
   constructor() {
     // initialize canvas
-    this.gameCanvas = new Canvas("game", ...gameSize());
+    this.gameCanvas = new Canvas("gameBoard", ...gameSize());
     const uiElement = document.getElementById("ui") as HTMLElement;
     uiElement.style.width = `${this.gameCanvas.width}px`;
     this.speedCanvas = new Canvas("speedometer");
@@ -78,7 +77,6 @@ export class SpeedSnek {
     this.pellet = new Pellet(this.gameCanvas.element);
     this.model = new Model(this.snek, this.pellet);
 
-    // initialize game state
     this.score = 0;
     const bestScore = localStorage.getItem("bestScore");
     this.bestScore = bestScore ? Number(bestScore) : 0;
@@ -104,7 +102,7 @@ export class SpeedSnek {
   public render(): void {
     this.gameCanvas.clear();
     this.speedCanvas.clear();
-    this.state.render();
+    this.state.graphics.render();
   }
 }
 
@@ -124,12 +122,8 @@ abstract class State {
   }
 
   public abstract enter(): void;
-  public abstract exit(): void;
-
   public update(): void {}
-  public render(): void {
-    return this.graphics.render();
-  }
+  public abstract exit(): void;
 }
 
 // Display game instructions, show start button
@@ -141,21 +135,23 @@ export class Title extends State {
   }
 
   public enter(): void {
+    const info = document.getElementById("info") as HTMLElement;
+    info.style.display = "flex";
+
     // Add a click listener to the start button
     // Transition to Ready state when clicked
     this.startButton = document.getElementById(
       "startButton"
     ) as HTMLButtonElement;
 
-    this.startButton.addEventListener("click", () =>
-      this.game.transitionTo(new Ready())
+    this.startButton.addEventListener(
+      "click",
+      () => this.game.transitionTo(new Ready()),
+      { once: true }
     );
   }
 
   public exit(): void {
-    // Hide the info elements, and remove event listener
-    this.startButton.removeEventListener("click", this.exit);
-
     const info = document.getElementById("info") as HTMLElement;
     info.style.display = "none";
   }
@@ -203,12 +199,7 @@ export class Ready extends State {
 
     // draw cursor line (if in dev mode) and snek
     if (process.env.NODE_ENV === "development") {
-      const cursorLine = new CanvasLine(
-        snek.segmentPath,
-        gameContext,
-        "red",
-        1
-      );
+      const cursorLine = new CanvasLine(snek.path, gameContext, "red", 1);
       gameGraphics.add(cursorLine);
     }
     gameGraphics.add(snekLine);
@@ -254,13 +245,15 @@ export class Set extends State {
 
   constructor(graphics: Composite) {
     super(graphics);
-
     this.startTime = Date.now();
   }
 
   public enter(): void {
     const snek = this.game.snek;
     document.addEventListener("pointermove", snek.moveHandler);
+    document.addEventListener("touchend", this.touchCheck, {
+      once: true,
+    });
   }
 
   update() {
@@ -269,13 +262,19 @@ export class Set extends State {
 
     this.messageElement.innerText = String(countStart - Math.floor(elapsed));
 
-    // TODO: Check if finger has left screen on phone
     if (countStart < elapsed) {
       this.game.transitionTo(new Go(this.graphics));
     }
   }
 
-  public exit(): void {}
+  touchCheck() {
+    document.removeEventListener("pointermove", this.game.snek.moveHandler);
+    this.game.transitionTo(new Ready());
+  }
+
+  public exit(): void {
+    document.removeEventListener("touchend", this.touchCheck);
+  }
 }
 
 // game is live
@@ -354,7 +353,9 @@ export class Go extends State {
     }
   }
 
-  public exit(): void {}
+  public exit(): void {
+    document.removeEventListener("pointermove", this.game.snek.moveHandler);
+  }
 }
 
 // Snek is dead :(
@@ -367,13 +368,10 @@ export class GameOver extends State {
   }
 
   public enter(): void {
-    document.removeEventListener("pointermove", this.game.snek.moveHandler);
     localStorage.setItem("bestScore", String(this.game.bestScore));
 
-    // if (process.env.NODE_ENV === "production") {
     alert(`Game Over!\n${this.reason}\nYour score: ${this.game.score}`);
-    this.game.transitionTo(new Ready());
-    // }
+    this.game.transitionTo(new Title());
   }
 
   public exit(): void {

@@ -29,9 +29,9 @@ This project was used to teach myself about:
 
 ## Todo
 
-- [ ] Finish the speed & score UI
-- [ ] Implement a starting screen and game over menu
 - [ ] Tweak the difficulty curve, consider adding lives maybe?
-- [ ] Figure out scaling on phone screens, how does it affect difficulty?
 - [ ] Maybe different kinds of food pellets? Power-ups?
+- [x] Figure out scaling on phone screens
 - [x] Create a minimal version of the game
+- [x] Implement a starting screen and game over menu
+- [x] Finish the speed & score UI

@@ -24,7 +24,6 @@
   align-items: center;
   margin: 0 auto;
   width: 100%;
-  max-width: 900px;
 
   &__ui {
     @extend .ui;
@@ -84,7 +83,6 @@
     position: absolute;
     left: 50%;
     padding: 5px 15px;
-    background-color: rgba(117, 190, 218, 0.5);
     transform: translate(-50%, 0);
     line-height: 1;
   }
