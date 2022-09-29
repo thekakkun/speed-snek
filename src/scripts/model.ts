@@ -1,73 +1,17 @@
 import { dist, intersection, Path, Point } from "./geometry";
 import { Canvas } from "./graphics";
-import { Go } from "./speedSnek";
 
 function randomBetween(min: number, max: number) {
   return Math.random() * (max - min) + min;
 }
 
-type Notification = ["pointermove", Cursor] | ["eatpellet", Go];
-
-interface Mediator {
-  notify(notification: Notification): void;
-}
-
-// events are sent here, and the mediator passes them on to the correct handler.
-// TODO: I don't think this is necessary anymore...
-export class Model implements Mediator {
-  private snek: Snek;
-  private pellet: Pellet;
-
-  constructor(snek: Snek, pellet: Pellet) {
-    this.snek = snek;
-    this.snek.setMediator(this);
-    this.pellet = pellet;
-    this.pellet.setMediator(this);
-  }
-
-  public notify(notification: Notification): void {
-    const [event, sender] = notification;
-
-    switch (event) {
-      case "pointermove":
-        this.snek.calculateSegments();
-        this.snek.calculateSpeed();
-        break;
-
-      case "eatpellet":
-        this.snek.grow();
-        this.pellet.place(this.snek.segmentPath);
-        break;
-
-      default:
-        const _exhaustiveCheck: never = sender;
-        return _exhaustiveCheck;
-    }
-  }
-}
-
-// Components contain some sort of logic and can reference their mediators
-// Things in the game that have data that need updating.
-abstract class Component {
-  protected mediator: Mediator;
-
-  constructor(mediator?: Mediator) {
-    this.mediator = mediator!;
-  }
-
-  public setMediator(mediator: Mediator): void {
-    this.mediator = mediator;
-  }
-}
-
-export class Cursor extends Component {
+export class Cursor {
   canvas: Canvas;
   path: Path;
   timeStamp: number[];
   rawSpeed: number;
 
   constructor(canvas: Canvas) {
-    super();
     this.canvas = canvas;
     this.path = [];
     this.timeStamp = [];
@@ -83,7 +27,6 @@ export class Cursor extends Component {
 
     this.path.unshift(point);
     this.timeStamp.unshift(e.timeStamp);
-    this.mediator.notify(["pointermove", this]);
   }
 
   public trim(ix: number) {
@@ -142,6 +85,12 @@ export class Snek extends Cursor {
     }
   }
 
+  public moveHandler(e: PointerEvent) {
+    super.moveHandler(e);
+    this.calculateSegments();
+    this.calculateSpeed();
+  }
+
   public calculateSegments() {
     Object.assign(this.segmentPath, this.path, { length: 1 });
     let segHead = this.segmentPath[this.segmentPath.length - 1];
@@ -181,14 +130,12 @@ export class Snek extends Cursor {
   }
 }
 
-export class Pellet extends Component {
+export class Pellet {
   target: HTMLCanvasElement;
   loc: Point;
   radius: number;
 
   constructor(target: HTMLCanvasElement) {
-    super();
-
     this.radius = 15;
     this.target = target;
     this.loc = Object.create({});
