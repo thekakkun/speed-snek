@@ -12,9 +12,41 @@
   z-index: 99;
 
   &__content {
-    background-color: white;
-    padding: 20px;
-    margin: 1.5rem;
+    @extend .content;
+  }
+}
+
+.content {
+  background-color: white;
+  padding: 20px;
+  margin: 1.5rem;
+
+  ul,
+  li,
+  p,
+  button {
+    font-family: sans-serif;
+  }
+
+  &__start {
+    button {
+      display: block;
+      margin: 15px auto 0;
+      font-size: 1.2rem;
+    }
+  }
+
+  &__end {
+    display: none;
+    text-align: center;
+
+    p {
+      font-size: 1.2rem;
+    }
+
+    button {
+      margin-top: 15px;
+    }
   }
 }
 

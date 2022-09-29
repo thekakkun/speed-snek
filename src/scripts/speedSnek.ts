@@ -128,8 +128,6 @@ abstract class State {
 
 // Display game instructions, show start button
 export class Title extends State {
-  startButton: HTMLButtonElement;
-
   constructor() {
     super();
   }
@@ -137,14 +135,18 @@ export class Title extends State {
   public enter(): void {
     const info = document.getElementById("info") as HTMLElement;
     info.style.display = "flex";
+    const startMessage = document.getElementById("startMessage") as HTMLElement;
+    startMessage.style.display = "block";
+    const endMessage = document.getElementById("endMessage") as HTMLElement;
+    endMessage.style.display = "none";
 
     // Add a click listener to the start button
     // Transition to Ready state when clicked
-    this.startButton = document.getElementById(
+    const startButton = document.getElementById(
       "startButton"
     ) as HTMLButtonElement;
 
-    this.startButton.addEventListener(
+    startButton.addEventListener(
       "click",
       () => this.game.transitionTo(new Ready()),
       { once: true }
@@ -370,8 +372,31 @@ export class GameOver extends State {
   public enter(): void {
     localStorage.setItem("bestScore", String(this.game.bestScore));
 
-    alert(`Game Over!\n${this.reason}\nYour score: ${this.game.score}`);
-    this.game.transitionTo(new Title());
+    const reasonElement = document.getElementById("reason") as HTMLElement;
+    reasonElement.innerText = this.reason;
+    const scoreElement = document.getElementById("score") as HTMLElement;
+    scoreElement.innerText = `Score: ${this.game.score}`;
+    const bestElement = document.getElementById("best") as HTMLElement;
+    bestElement.innerText =
+      `Best: ${this.game.bestScore}` +
+      (this.game.score === this.game.bestScore ? " (NEW BEST!)" : "");
+
+    const info = document.getElementById("info") as HTMLElement;
+    info.style.display = "flex";
+    const startMessage = document.getElementById("startMessage") as HTMLElement;
+    startMessage.style.display = "none";
+    const endMessage = document.getElementById("endMessage") as HTMLElement;
+    endMessage.style.display = "block";
+
+    const restartButton = document.getElementById(
+      "restartButton"
+    ) as HTMLButtonElement;
+
+    restartButton.addEventListener(
+      "click",
+      () => this.game.transitionTo(new Title()),
+      { once: true }
+    );
   }
 
   public exit(): void {
