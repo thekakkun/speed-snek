@@ -38,7 +38,6 @@ export class SpeedSnek {
     this.speedCanvas = new Canvas("speedometer");
 
     // initialize game objects
-    // this.cursor = new Cursor(this.gameCanvas.element);
     this.snek = new Snek(this.gameCanvas);
     this.pellet = new Pellet(this.gameCanvas.element);
 
@@ -54,7 +53,6 @@ export class SpeedSnek {
   }
 
   public transitionTo(state: State): void {
-    console.log(`Context: Transition to ${(<any>state).constructor.name}.`);
     if (this.state) {
       this.state.exit();
     }
@@ -70,17 +68,6 @@ export class SpeedSnek {
     this.bestScore = Math.max(this.bestScore, this.score);
     this.speedLimit = Math.min(this.speedLimit + 0.05, this.maxSpeed);
     this.snek.grow();
-  }
-
-  public restart() {
-    this.snek = new Snek(this.gameCanvas);
-    this.pellet = new Pellet(this.gameCanvas.element);
-
-    this.score = 0;
-    const bestScore = localStorage.getItem("bestScore");
-    this.bestScore = bestScore ? Number(bestScore) : 0;
-    this.speedLimit = 0;
-    this.maxSpeed = 5;
   }
 
   public gameLoop() {
@@ -126,7 +113,7 @@ abstract class State {
   public abstract exit(): void;
 }
 
-// Display game instructions, show start button
+// Display game instructions, show the start button
 export class Title extends State {
   constructor() {
     super();
@@ -309,13 +296,20 @@ export class Go extends State {
   }
 
   update() {
-    // speed check
+    this.speedCheck();
+    this.snekPelletCollision();
+    this.snekWallCollision();
+    this.snekSnekCollision();
+  }
+
+  speedCheck() {
     if (this.game.snek.speed < this.game.speedLimit) {
       console.log("faster!");
       this.game.transitionTo(new GameOver("You were too slow!"));
     }
+  }
 
-    // snek vs. pellet collision
+  snekPelletCollision() {
     if (this.game.pellet.loc) {
       if (
         2 <= this.game.snek.segmentPath.length &&
@@ -332,8 +326,9 @@ export class Go extends State {
         this.game.pellet.place(this.game.snek.segmentPath);
       }
     }
+  }
 
-    // snek vs. wall collision
+  snekWallCollision() {
     const gameElement = this.game.gameCanvas.element;
     if (
       this.game.snek.segmentPath[0].x - 1 <= 0 ||
@@ -344,8 +339,9 @@ export class Go extends State {
       console.log("whoops!");
       this.game.transitionTo(new GameOver("You crashed into a wall!"));
     }
+  }
 
-    // snek vs. snek collision
+  snekSnekCollision() {
     for (let i = 2; i < this.game.snek.segmentPath.length - 1; i++) {
       if (
         intersection(
@@ -406,6 +402,6 @@ export class GameOver extends State {
   }
 
   public exit(): void {
-    this.game.restart();
+    location.reload();
   }
 }
