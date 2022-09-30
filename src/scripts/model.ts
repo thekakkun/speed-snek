@@ -10,23 +10,32 @@ export class Cursor {
   path: Path;
   timeStamp: number[];
   rawSpeed: number;
+  lastEvent: string;
 
   constructor(canvas: Canvas) {
     this.canvas = canvas;
     this.path = [];
     this.timeStamp = [];
     this.rawSpeed = 0;
+    this.lastEvent = "";
     this.moveHandler = this.moveHandler.bind(this);
   }
 
-  public moveHandler(e: PointerEvent) {
-    const point = {
-      x: e.x - this.canvas.element.getBoundingClientRect().x,
-      y: e.y - this.canvas.element.getBoundingClientRect().y,
-    };
+  public moveHandler(e: PointerEvent | Event) {
+    if (e instanceof PointerEvent) {
+      const point = {
+        x: e.x - this.canvas.element.getBoundingClientRect().x,
+        y: e.y - this.canvas.element.getBoundingClientRect().y,
+      };
 
-    this.path.unshift(point);
-    this.timeStamp.unshift(e.timeStamp);
+      this.path.unshift(point);
+      this.timeStamp.unshift(e.timeStamp);
+    } else if (this.lastEvent === e.type && this.path.length) {
+      this.path.unshift(this.path[0]);
+      this.timeStamp.unshift(e.timeStamp);
+    }
+
+    this.lastEvent = e.type;
   }
 
   public trim(ix: number) {
@@ -34,10 +43,10 @@ export class Cursor {
     this.timeStamp.splice(ix);
   }
 
-  public getSpeed(window = 6) {
+  public setSpeed(window = 6) {
     window = Math.min(window, this.path.length - 1);
     if (window < 2) {
-      return 0;
+      this.rawSpeed = 0;
     }
 
     let travelled = 0;
@@ -47,11 +56,11 @@ export class Cursor {
       time += this.timeStamp[i] - this.timeStamp[i + 1];
     }
 
-    return travelled / time;
-  }
-
-  public updateSpeed() {
-    this.rawSpeed = this.getSpeed();
+    if (travelled === 0 || time === 0) {
+      this.rawSpeed = 0;
+    } else {
+      this.rawSpeed = travelled / time;
+    }
   }
 }
 
@@ -85,10 +94,10 @@ export class Snek extends Cursor {
     }
   }
 
-  public moveHandler(e: PointerEvent) {
+  public moveHandler(e: PointerEvent | Event) {
     super.moveHandler(e);
     this.calculateSegments();
-    this.calculateSpeed();
+    this.setSpeed();
   }
 
   public calculateSegments() {
@@ -116,13 +125,11 @@ export class Snek extends Cursor {
     }
   }
 
-  public calculateSpeed() {
-    this.updateSpeed();
+  public setSpeed(window = 6) {
+    super.setSpeed(window);
 
     const alpha = 0.05;
-    if (this.rawSpeed !== NaN) {
-      this.speed = alpha * this.rawSpeed + (1 - alpha) * this.speed;
-    }
+    this.speed = alpha * this.rawSpeed + (1 - alpha) * this.speed;
   }
 
   public grow() {

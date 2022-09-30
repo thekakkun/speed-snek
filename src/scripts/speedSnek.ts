@@ -102,6 +102,7 @@ export class SpeedSnek {
     this.gameCanvas.clear();
     this.speedCanvas.clear();
     this.state.graphics.render();
+    dispatchEvent(new Event("render"));
   }
 }
 
@@ -172,7 +173,7 @@ export class Ready extends State {
     this.messageElement.innerText = "Pointer in the circle to start";
     this.initUiGraphics();
     this.initGameGraphics();
-    document.addEventListener("pointermove", this.checkPlayerReady);
+    addEventListener("pointermove", this.checkPlayerReady);
     this.game.gameLoop();
   }
 
@@ -236,7 +237,7 @@ export class Ready extends State {
   }
 
   public exit(): void {
-    document.removeEventListener("pointermove", this.checkPlayerReady);
+    removeEventListener("pointermove", this.checkPlayerReady);
     this.graphics.remove(this.readyAreaGraphics);
   }
 }
@@ -252,8 +253,9 @@ export class Set extends State {
 
   public enter(): void {
     const snek = this.game.snek;
-    document.addEventListener("pointermove", snek.moveHandler);
-    document.addEventListener("touchend", this.touchCheck, {
+    addEventListener("pointermove", snek.moveHandler);
+    addEventListener("render", snek.moveHandler);
+    addEventListener("touchend", this.touchCheck, {
       once: true,
     });
   }
@@ -270,12 +272,13 @@ export class Set extends State {
   }
 
   touchCheck() {
-    document.removeEventListener("pointermove", this.game.snek.moveHandler);
+    removeEventListener("pointermove", this.game.snek.moveHandler);
+    removeEventListener("render", this.game.snek.moveHandler);
     this.game.transitionTo(new Ready());
   }
 
   public exit(): void {
-    document.removeEventListener("touchend", this.touchCheck);
+    removeEventListener("touchend", this.touchCheck);
   }
 }
 
@@ -357,7 +360,8 @@ export class Go extends State {
   }
 
   public exit(): void {
-    document.removeEventListener("pointermove", this.game.snek.moveHandler);
+    removeEventListener("pointermove", this.game.snek.moveHandler);
+    removeEventListener("render", this.game.snek.moveHandler);
     cancelAnimationFrame(this.game.reqId);
   }
 }
