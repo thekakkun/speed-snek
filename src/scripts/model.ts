@@ -1,89 +1,41 @@
 import { dist, intersection, Path, Point } from "./geometry";
 import { Canvas } from "./graphics";
-import { Go } from "./speedSnek";
 
 function randomBetween(min: number, max: number) {
   return Math.random() * (max - min) + min;
 }
 
-type Notification = ["pointermove", Cursor] | ["eatpellet", Go];
-
-interface Mediator {
-  notify(notification: Notification): void;
-}
-
-// events are sent here, and the mediator passes them on to the correct handler.
-// TODO: I don't think this is necessary anymore...
-export class Model implements Mediator {
-  private snek: Snek;
-  private pellet: Pellet;
-
-  constructor(snek: Snek, pellet: Pellet) {
-    this.snek = snek;
-    this.snek.setMediator(this);
-    this.pellet = pellet;
-    this.pellet.setMediator(this);
-  }
-
-  public notify(notification: Notification): void {
-    const [event, sender] = notification;
-
-    switch (event) {
-      case "pointermove":
-        this.snek.calculateSegments();
-        this.snek.calculateSpeed();
-        break;
-
-      case "eatpellet":
-        this.snek.grow();
-        this.pellet.place(this.snek.segmentPath);
-        break;
-
-      default:
-        const _exhaustiveCheck: never = sender;
-        return _exhaustiveCheck;
-    }
-  }
-}
-
-// Components contain some sort of logic and can reference their mediators
-// Things in the game that have data that need updating.
-abstract class Component {
-  protected mediator: Mediator;
-
-  constructor(mediator?: Mediator) {
-    this.mediator = mediator!;
-  }
-
-  public setMediator(mediator: Mediator): void {
-    this.mediator = mediator;
-  }
-}
-
-export class Cursor extends Component {
+export class Cursor {
   canvas: Canvas;
   path: Path;
   timeStamp: number[];
   rawSpeed: number;
+  lastEvent: string;
 
   constructor(canvas: Canvas) {
-    super();
     this.canvas = canvas;
     this.path = [];
     this.timeStamp = [];
     this.rawSpeed = 0;
+    this.lastEvent = "";
     this.moveHandler = this.moveHandler.bind(this);
   }
 
-  public moveHandler(e: PointerEvent) {
-    const point = {
-      x: e.x - this.canvas.element.getBoundingClientRect().x,
-      y: e.y - this.canvas.element.getBoundingClientRect().y,
-    };
+  public moveHandler(e: PointerEvent | Event) {
+    if (e instanceof PointerEvent) {
+      const point = {
+        x: e.x - this.canvas.element.getBoundingClientRect().x,
+        y: e.y - this.canvas.element.getBoundingClientRect().y,
+      };
 
-    this.path.unshift(point);
-    this.timeStamp.unshift(e.timeStamp);
-    this.mediator.notify(["pointermove", this]);
+      this.path.unshift(point);
+      this.timeStamp.unshift(e.timeStamp);
+    } else if (this.lastEvent === e.type && this.path.length) {
+      this.path.unshift(this.path[0]);
+      this.timeStamp.unshift(e.timeStamp);
+    }
+
+    this.lastEvent = e.type;
   }
 
   public trim(ix: number) {
@@ -91,10 +43,10 @@ export class Cursor extends Component {
     this.timeStamp.splice(ix);
   }
 
-  public getSpeed(window = 6) {
+  public setSpeed(window = 6) {
     window = Math.min(window, this.path.length - 1);
     if (window < 2) {
-      return 0;
+      this.rawSpeed = 0;
     }
 
     let travelled = 0;
@@ -104,11 +56,11 @@ export class Cursor extends Component {
       time += this.timeStamp[i] - this.timeStamp[i + 1];
     }
 
-    return travelled / time;
-  }
-
-  public updateSpeed() {
-    this.rawSpeed = this.getSpeed();
+    if (travelled === 0 || time === 0) {
+      this.rawSpeed = 0;
+    } else {
+      this.rawSpeed = travelled / time;
+    }
   }
 }
 
@@ -142,6 +94,12 @@ export class Snek extends Cursor {
     }
   }
 
+  public moveHandler(e: PointerEvent | Event) {
+    super.moveHandler(e);
+    this.calculateSegments();
+    this.setSpeed();
+  }
+
   public calculateSegments() {
     Object.assign(this.segmentPath, this.path, { length: 1 });
     let segHead = this.segmentPath[this.segmentPath.length - 1];
@@ -167,13 +125,11 @@ export class Snek extends Cursor {
     }
   }
 
-  public calculateSpeed() {
-    this.updateSpeed();
+  public setSpeed(window = 6) {
+    super.setSpeed(window);
 
     const alpha = 0.05;
-    if (this.rawSpeed !== NaN) {
-      this.speed = alpha * this.rawSpeed + (1 - alpha) * this.speed;
-    }
+    this.speed = alpha * this.rawSpeed + (1 - alpha) * this.speed;
   }
 
   public grow() {
@@ -181,14 +137,12 @@ export class Snek extends Cursor {
   }
 }
 
-export class Pellet extends Component {
+export class Pellet {
   target: HTMLCanvasElement;
   loc: Point;
   radius: number;
 
   constructor(target: HTMLCanvasElement) {
-    super();
-
     this.radius = 15;
     this.target = target;
     this.loc = Object.create({});

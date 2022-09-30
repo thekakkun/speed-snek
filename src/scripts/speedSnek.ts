@@ -1,5 +1,5 @@
 import { Arc, dist, intersection } from "./geometry";
-import { Model, Pellet, Snek } from "./model";
+import { Pellet, Snek } from "./model";
 import {
   Canvas,
   CanvasCircle,
@@ -20,7 +20,7 @@ export class SpeedSnek {
   public reqId: number;
 
   // game model
-  public model: Model;
+
   public snek: Snek;
   public pellet: Pellet;
 
@@ -38,10 +38,8 @@ export class SpeedSnek {
     this.speedCanvas = new Canvas("speedometer");
 
     // initialize game objects
-    // this.cursor = new Cursor(this.gameCanvas.element);
     this.snek = new Snek(this.gameCanvas);
     this.pellet = new Pellet(this.gameCanvas.element);
-    this.model = new Model(this.snek, this.pellet);
 
     // initialize game state
     this.score = 0;
@@ -55,7 +53,6 @@ export class SpeedSnek {
   }
 
   public transitionTo(state: State): void {
-    console.log(`Context: Transition to ${(<any>state).constructor.name}.`);
     if (this.state) {
       this.state.exit();
     }
@@ -70,18 +67,7 @@ export class SpeedSnek {
     this.score += 1;
     this.bestScore = Math.max(this.bestScore, this.score);
     this.speedLimit = Math.min(this.speedLimit + 0.05, this.maxSpeed);
-  }
-
-  public restart() {
-    this.snek = new Snek(this.gameCanvas);
-    this.pellet = new Pellet(this.gameCanvas.element);
-    this.model = new Model(this.snek, this.pellet);
-
-    this.score = 0;
-    const bestScore = localStorage.getItem("bestScore");
-    this.bestScore = bestScore ? Number(bestScore) : 0;
-    this.speedLimit = 0;
-    this.maxSpeed = 5;
+    this.snek.grow();
   }
 
   public gameLoop() {
@@ -103,6 +89,7 @@ export class SpeedSnek {
     this.gameCanvas.clear();
     this.speedCanvas.clear();
     this.state.graphics.render();
+    dispatchEvent(new Event("render"));
   }
 }
 
@@ -126,7 +113,7 @@ abstract class State {
   public abstract exit(): void;
 }
 
-// Display game instructions, show start button
+// Display game instructions, show the start button
 export class Title extends State {
   constructor() {
     super();
@@ -173,7 +160,8 @@ export class Ready extends State {
     this.messageElement.innerText = "Pointer in the circle to start";
     this.initUiGraphics();
     this.initGameGraphics();
-    document.addEventListener("pointermove", this.checkPlayerReady);
+    addEventListener("pointermove", this.checkPlayerReady);
+    this.game.gameLoop();
   }
 
   initUiGraphics() {
@@ -236,7 +224,7 @@ export class Ready extends State {
   }
 
   public exit(): void {
-    document.removeEventListener("pointermove", this.checkPlayerReady);
+    removeEventListener("pointermove", this.checkPlayerReady);
     this.graphics.remove(this.readyAreaGraphics);
   }
 }
@@ -252,8 +240,9 @@ export class Set extends State {
 
   public enter(): void {
     const snek = this.game.snek;
-    document.addEventListener("pointermove", snek.moveHandler);
-    document.addEventListener("touchend", this.touchCheck, {
+    addEventListener("pointermove", snek.moveHandler);
+    addEventListener("render", snek.moveHandler);
+    addEventListener("touchend", this.touchCheck, {
       once: true,
     });
   }
@@ -270,12 +259,13 @@ export class Set extends State {
   }
 
   touchCheck() {
-    document.removeEventListener("pointermove", this.game.snek.moveHandler);
+    removeEventListener("pointermove", this.game.snek.moveHandler);
+    removeEventListener("render", this.game.snek.moveHandler);
     this.game.transitionTo(new Ready());
   }
 
   public exit(): void {
-    document.removeEventListener("touchend", this.touchCheck);
+    removeEventListener("touchend", this.touchCheck);
   }
 }
 
@@ -306,48 +296,58 @@ export class Go extends State {
   }
 
   update() {
-    const snek = this.game.snek;
-    const snekPath = snek.segmentPath;
-    const cursorPath = snek.segmentPath;
-    const pellet = this.game.pellet;
+    this.speedCheck();
+    this.snekPelletCollision();
+    this.snekWallCollision();
+    this.snekSnekCollision();
+  }
 
-    // speed check
-    if (snek.speed < this.game.speedLimit) {
+  speedCheck() {
+    if (this.game.snek.speed < this.game.speedLimit) {
       console.log("faster!");
       this.game.transitionTo(new GameOver("You were too slow!"));
     }
+  }
 
-    // snek vs. pellet collision
-    if (pellet.loc) {
+  snekPelletCollision() {
+    if (this.game.pellet.loc) {
       if (
-        2 <= cursorPath.length &&
-        intersection([cursorPath[0], cursorPath[1]], {
-          center: pellet.loc,
-          radius: pellet.radius + snek.snekWidth / 2,
-        })
+        2 <= this.game.snek.segmentPath.length &&
+        intersection(
+          [this.game.snek.segmentPath[0], this.game.snek.segmentPath[1]],
+          {
+            center: this.game.pellet.loc,
+            radius: this.game.pellet.radius + this.game.snek.snekWidth / 2,
+          }
+        )
       ) {
         console.log("nom!");
         this.game.increaseScore();
-        this.game.model.notify(["eatpellet", this]);
+        this.game.pellet.place(this.game.snek.segmentPath);
       }
     }
+  }
 
-    // snek vs. wall collision
+  snekWallCollision() {
     const gameElement = this.game.gameCanvas.element;
     if (
-      snekPath[0].x - 1 <= 0 ||
-      gameElement.clientWidth - 1 <= snekPath[0].x ||
-      snekPath[0].y - 1 <= 0 ||
-      gameElement.clientHeight - 1 <= snekPath[0].y
+      this.game.snek.segmentPath[0].x - 1 <= 0 ||
+      gameElement.clientWidth - 1 <= this.game.snek.segmentPath[0].x ||
+      this.game.snek.segmentPath[0].y - 1 <= 0 ||
+      gameElement.clientHeight - 1 <= this.game.snek.segmentPath[0].y
     ) {
       console.log("whoops!");
       this.game.transitionTo(new GameOver("You crashed into a wall!"));
     }
+  }
 
-    // snek vs. snek collision
-    for (let i = 2; i < snekPath.length - 1; i++) {
+  snekSnekCollision() {
+    for (let i = 2; i < this.game.snek.segmentPath.length - 1; i++) {
       if (
-        intersection([snekPath[0], snekPath[1]], [snekPath[i], snekPath[i + 1]])
+        intersection(
+          [this.game.snek.segmentPath[0], this.game.snek.segmentPath[1]],
+          [this.game.snek.segmentPath[i], this.game.snek.segmentPath[i + 1]]
+        )
       ) {
         console.log("ouch!");
         this.game.transitionTo(new GameOver("You crashed into yourself!"));
@@ -356,7 +356,9 @@ export class Go extends State {
   }
 
   public exit(): void {
-    document.removeEventListener("pointermove", this.game.snek.moveHandler);
+    removeEventListener("pointermove", this.game.snek.moveHandler);
+    removeEventListener("render", this.game.snek.moveHandler);
+    cancelAnimationFrame(this.game.reqId);
   }
 }
 
@@ -400,6 +402,6 @@ export class GameOver extends State {
   }
 
   public exit(): void {
-    this.game.restart();
+    location.reload();
   }
 }
