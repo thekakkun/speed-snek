@@ -14,39 +14,43 @@ export class SpeedSnek {
   // store current state
   private state: State;
 
-  // game canvases
-  public speedCanvas: Canvas;
-  public gameCanvas: Canvas;
-  public reqId: number;
-
-  // game model
-
-  public snek: Snek;
-  public pellet: Pellet;
-
   // gameplay status
   public score: number;
   public bestScore: number;
   public speedLimit: number;
+  public speedIncrement: number;
   public maxSpeed: number;
 
+  // game canvases
+  public speedCanvas: Canvas;
+  public gameCanvas: Canvas;
+  public reqId: number;
+  public deviceType: "pc" | "mobile";
+
+  // game model
+  public snek: Snek;
+  public pellet: Pellet;
+
   constructor() {
-    // initialize canvas
-    this.gameCanvas = new Canvas("gameBoard", ...gameSize());
-    const uiElement = document.getElementById("ui") as HTMLElement;
-    uiElement.style.width = `${this.gameCanvas.width}px`;
-    this.speedCanvas = new Canvas("speedometer");
-
-    // initialize game objects
-    this.snek = new Snek(this.gameCanvas);
-    this.pellet = new Pellet(this.gameCanvas.element);
-
     // initialize game state
     this.score = 0;
     const bestScore = localStorage.getItem("bestScore");
     this.bestScore = bestScore ? Number(bestScore) : 0;
     this.speedLimit = 0;
+    this.speedIncrement = 0.05;
     this.maxSpeed = 5;
+    this.showScore();
+
+    // initialize canvas
+    this.gameCanvas = new Canvas("gameBoard", ...gameSize());
+    const uiElement = document.getElementById("ui") as HTMLElement;
+    uiElement.style.width = `${this.gameCanvas.width}px`;
+    this.speedCanvas = new Canvas("speedometer");
+    this.deviceType = "pc";
+
+    // initialize game objects
+    this.snek = new Snek(this.gameCanvas);
+    this.pellet = new Pellet(this.gameCanvas.element);
 
     // Start on title screen
     this.transitionTo(new Title());
@@ -66,7 +70,10 @@ export class SpeedSnek {
   public increaseScore() {
     this.score += 1;
     this.bestScore = Math.max(this.bestScore, this.score);
-    this.speedLimit = Math.min(this.speedLimit + 0.05, this.maxSpeed);
+    this.speedLimit = Math.min(
+      this.speedLimit + this.speedIncrement,
+      this.maxSpeed
+    );
     this.snek.grow();
   }
 
@@ -76,12 +83,16 @@ export class SpeedSnek {
     this.reqId = requestAnimationFrame(() => this.gameLoop());
   }
 
-  public update(): void {
+  public showScore(): void {
     const currentScore = document.getElementById("currentScore") as HTMLElement;
     currentScore.innerHTML = `Score: ${String(this.score).padStart(2, "\xa0")}`;
 
     const bestScore = document.getElementById("bestScore") as HTMLElement;
     bestScore.innerHTML = `Best: ${String(this.bestScore).padStart(2, "\xa0")}`;
+  }
+
+  public update(): void {
+    this.showScore();
     this.state.update();
   }
 
@@ -135,7 +146,19 @@ export class Title extends State {
 
     startButton.addEventListener(
       "click",
-      () => this.game.transitionTo(new Ready()),
+      (e) => {
+        console.log(e);
+        this.game.transitionTo(new Ready());
+      },
+      { once: true }
+    );
+    startButton.addEventListener(
+      "pointerup",
+      (e) => {
+        if (e.pointerType === "touch") {
+          this.game.deviceType = "mobile";
+        }
+      },
       { once: true }
     );
   }
@@ -157,10 +180,14 @@ export class Ready extends State {
   }
 
   public enter(): void {
-    this.messageElement.innerText = "Pointer in the circle to start";
+    const pointerType = this.game.deviceType === "pc" ? "cursor" : "finger";
+    this.messageElement.innerText = `${pointerType} on the circle to start`;
     this.initUiGraphics();
     this.initGameGraphics();
-    addEventListener("pointermove", this.checkPlayerReady);
+    this.game.gameCanvas.element.addEventListener(
+      "pointermove",
+      this.checkPlayerReady
+    );
     this.game.gameLoop();
   }
 
@@ -224,7 +251,10 @@ export class Ready extends State {
   }
 
   public exit(): void {
-    removeEventListener("pointermove", this.checkPlayerReady);
+    this.game.gameCanvas.element.removeEventListener(
+      "pointermove",
+      this.checkPlayerReady
+    );
     this.graphics.remove(this.readyAreaGraphics);
   }
 }
@@ -236,13 +266,19 @@ export class Set extends State {
   constructor(graphics: Composite) {
     super(graphics);
     this.startTime = Date.now();
+    this.readyCheck = this.readyCheck.bind(this);
   }
 
   public enter(): void {
     const snek = this.game.snek;
-    addEventListener("pointermove", snek.moveHandler);
+    const gameElement = this.game.gameCanvas.element;
+    gameElement.addEventListener("pointermove", snek.moveHandler);
     addEventListener("render", snek.moveHandler);
-    addEventListener("touchend", this.touchCheck, {
+
+    gameElement.addEventListener("pointerout", this.readyCheck, {
+      once: true,
+    });
+    gameElement.addEventListener("touchend", this.readyCheck, {
       once: true,
     });
   }
@@ -258,14 +294,16 @@ export class Set extends State {
     }
   }
 
-  touchCheck() {
-    removeEventListener("pointermove", this.game.snek.moveHandler);
+  readyCheck() {
+    const gameElement = this.game.gameCanvas.element;
+    gameElement.removeEventListener("pointermove", this.game.snek.moveHandler);
     removeEventListener("render", this.game.snek.moveHandler);
     this.game.transitionTo(new Ready());
   }
 
   public exit(): void {
-    removeEventListener("touchend", this.touchCheck);
+    const gameElement = this.game.gameCanvas.element;
+    gameElement.removeEventListener("touchend", this.readyCheck);
   }
 }
 
@@ -276,6 +314,16 @@ export class Go extends State {
   }
 
   public enter(): void {
+    // checks that snek is within canvas
+    this.game.gameCanvas.element.addEventListener(
+      "pointerout",
+      () => {
+        console.log("whoops!");
+        this.game.transitionTo(new GameOver("You crashed into a wall!"));
+      },
+      { once: true }
+    );
+
     this.messageElement.innerHTML = "GO!";
     setTimeout(() => {
       this.messageElement.innerText = "";
@@ -298,7 +346,6 @@ export class Go extends State {
   update() {
     this.speedCheck();
     this.snekPelletCollision();
-    this.snekWallCollision();
     this.snekSnekCollision();
   }
 
@@ -356,7 +403,8 @@ export class Go extends State {
   }
 
   public exit(): void {
-    removeEventListener("pointermove", this.game.snek.moveHandler);
+    const gameElement = this.game.gameCanvas.element;
+    gameElement.removeEventListener("pointermove", this.game.snek.moveHandler);
     removeEventListener("render", this.game.snek.moveHandler);
     cancelAnimationFrame(this.game.reqId);
   }
