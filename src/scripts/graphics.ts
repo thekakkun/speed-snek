@@ -55,12 +55,11 @@ export class Canvas {
     this.element.style.height = `${this.height}px`;
 
     // Scale for high resolution displays
-    const dpr = window.devicePixelRatio;
-    this.element.width = Math.floor(this.width * dpr);
-    this.element.height = Math.floor(this.height * dpr);
+    this.element.width = Math.floor(this.width * devicePixelRatio);
+    this.element.height = Math.floor(this.height * devicePixelRatio);
 
     // scale the output
-    this.context.scale(dpr, dpr);
+    this.context.scale(devicePixelRatio, devicePixelRatio);
   }
 
   clear() {
