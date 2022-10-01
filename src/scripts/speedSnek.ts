@@ -271,20 +271,14 @@ export class Set extends State {
 
   public enter(): void {
     const snek = this.game.snek;
-    this.game.gameCanvas.element.addEventListener(
-      "pointermove",
-      snek.moveHandler
-    );
+    const gameElement = this.game.gameCanvas.element;
+    gameElement.addEventListener("pointermove", snek.moveHandler);
     addEventListener("render", snek.moveHandler);
 
-    this.game.gameCanvas.element.addEventListener(
-      "pointerout",
-      this.readyCheck,
-      {
-        once: true,
-      }
-    );
-    this.game.gameCanvas.element.addEventListener("touchend", this.readyCheck, {
+    gameElement.addEventListener("pointerout", this.readyCheck, {
+      once: true,
+    });
+    gameElement.addEventListener("touchend", this.readyCheck, {
       once: true,
     });
   }
@@ -301,20 +295,15 @@ export class Set extends State {
   }
 
   readyCheck() {
-    console.log("hi");
-    this.game.gameCanvas.element.removeEventListener(
-      "pointermove",
-      this.game.snek.moveHandler
-    );
+    const gameElement = this.game.gameCanvas.element;
+    gameElement.removeEventListener("pointermove", this.game.snek.moveHandler);
     removeEventListener("render", this.game.snek.moveHandler);
     this.game.transitionTo(new Ready());
   }
 
   public exit(): void {
-    this.game.gameCanvas.element.removeEventListener(
-      "touchend",
-      this.readyCheck
-    );
+    const gameElement = this.game.gameCanvas.element;
+    gameElement.removeEventListener("touchend", this.readyCheck);
   }
 }
 
@@ -414,10 +403,8 @@ export class Go extends State {
   }
 
   public exit(): void {
-    this.game.gameCanvas.element.removeEventListener(
-      "pointermove",
-      this.game.snek.moveHandler
-    );
+    const gameElement = this.game.gameCanvas.element;
+    gameElement.removeEventListener("pointermove", this.game.snek.moveHandler);
     removeEventListener("render", this.game.snek.moveHandler);
     cancelAnimationFrame(this.game.reqId);
   }
