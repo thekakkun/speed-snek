@@ -107,7 +107,7 @@
 .game {
   position: relative;
   border: 2px grey solid;
-
+  
   &__message {
     font-family: sans-serif;
     font-size: 2rem;
@@ -118,9 +118,9 @@
     transform: translate(-50%, 0);
     line-height: 1;
   }
-
+  
   &__board {
-    background-color: #eee;
     touch-action: none;
+    background-color: #eee;
   }
 }

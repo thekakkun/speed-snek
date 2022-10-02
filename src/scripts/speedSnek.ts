@@ -25,7 +25,7 @@ export class SpeedSnek {
   public speedCanvas: Canvas;
   public gameCanvas: Canvas;
   public reqId: number;
-  public deviceType: "pc" | "mobile";
+  public inputType: "mouse" | "touch";
 
   // game model
   public snek: Snek;
@@ -46,7 +46,7 @@ export class SpeedSnek {
     const uiElement = document.getElementById("ui") as HTMLElement;
     uiElement.style.width = `${this.gameCanvas.width}px`;
     this.speedCanvas = new Canvas("speedometer");
-    this.deviceType = "pc";
+    this.inputType = "mouse";
 
     // initialize game objects
     this.snek = new Snek(this.gameCanvas);
@@ -61,6 +61,7 @@ export class SpeedSnek {
       this.state.exit();
     }
 
+    console.log(`Context: Transition to ${(<any>state).constructor.name}.`);
     this.state = state;
     this.state.setContext(this);
 
@@ -147,7 +148,6 @@ export class Title extends State {
     startButton.addEventListener(
       "click",
       (e) => {
-        console.log(e);
         this.game.transitionTo(new Ready());
       },
       { once: true }
@@ -156,7 +156,7 @@ export class Title extends State {
       "pointerup",
       (e) => {
         if (e.pointerType === "touch") {
-          this.game.deviceType = "mobile";
+          this.game.inputType = e.pointerType;
         }
       },
       { once: true }
@@ -180,14 +180,16 @@ export class Ready extends State {
   }
 
   public enter(): void {
-    const pointerType = this.game.deviceType === "pc" ? "cursor" : "finger";
+    const pointerType = this.game.inputType === "mouse" ? "cursor" : "finger";
     this.messageElement.innerText = `${pointerType} on the circle to start`;
     this.initUiGraphics();
     this.initGameGraphics();
-    this.game.gameCanvas.element.addEventListener(
-      "pointermove",
-      this.checkPlayerReady
-    );
+
+    const gameElement = this.game.gameCanvas.element;
+    gameElement.addEventListener("pointerdown", (e) => {
+      gameElement.releasePointerCapture(e.pointerId);
+    });
+    gameElement.addEventListener("pointermove", this.checkPlayerReady);
     this.game.gameLoop();
   }
 
@@ -266,19 +268,14 @@ export class Set extends State {
   constructor(graphics: Composite) {
     super(graphics);
     this.startTime = Date.now();
-    this.readyCheck = this.readyCheck.bind(this);
+    this.notReady = this.notReady.bind(this);
   }
 
   public enter(): void {
-    const snek = this.game.snek;
     const gameElement = this.game.gameCanvas.element;
-    gameElement.addEventListener("pointermove", snek.moveHandler);
-    addEventListener("render", snek.moveHandler);
-
-    gameElement.addEventListener("pointerout", this.readyCheck, {
-      once: true,
-    });
-    gameElement.addEventListener("touchend", this.readyCheck, {
+    gameElement.addEventListener("pointermove", this.game.snek.moveHandler);
+    addEventListener("render", this.game.snek.moveHandler);
+    gameElement.addEventListener("pointerleave", this.notReady, {
       once: true,
     });
   }
@@ -294,17 +291,15 @@ export class Set extends State {
     }
   }
 
-  readyCheck() {
+  notReady() {
     const gameElement = this.game.gameCanvas.element;
     gameElement.removeEventListener("pointermove", this.game.snek.moveHandler);
     removeEventListener("render", this.game.snek.moveHandler);
+
     this.game.transitionTo(new Ready());
   }
 
-  public exit(): void {
-    const gameElement = this.game.gameCanvas.element;
-    gameElement.removeEventListener("touchend", this.readyCheck);
-  }
+  public exit(): void {}
 }
 
 // game is live
@@ -316,7 +311,7 @@ export class Go extends State {
   public enter(): void {
     // checks that snek is within canvas
     this.game.gameCanvas.element.addEventListener(
-      "pointerout",
+      "pointerleave",
       () => {
         console.log("whoops!");
         this.game.transitionTo(new GameOver("You crashed into a wall!"));
@@ -375,19 +370,6 @@ export class Go extends State {
     }
   }
 
-  snekWallCollision() {
-    const gameElement = this.game.gameCanvas.element;
-    if (
-      this.game.snek.segmentPath[0].x - 1 <= 0 ||
-      gameElement.clientWidth - 1 <= this.game.snek.segmentPath[0].x ||
-      this.game.snek.segmentPath[0].y - 1 <= 0 ||
-      gameElement.clientHeight - 1 <= this.game.snek.segmentPath[0].y
-    ) {
-      console.log("whoops!");
-      this.game.transitionTo(new GameOver("You crashed into a wall!"));
-    }
-  }
-
   snekSnekCollision() {
     for (let i = 2; i < this.game.snek.segmentPath.length - 1; i++) {
       if (
@@ -424,8 +406,10 @@ export class GameOver extends State {
 
     const reasonElement = document.getElementById("reason") as HTMLElement;
     reasonElement.innerText = this.reason;
+
     const scoreElement = document.getElementById("score") as HTMLElement;
     scoreElement.innerText = `Score: ${this.game.score}`;
+
     const bestElement = document.getElementById("best") as HTMLElement;
     bestElement.innerText =
       `Best: ${this.game.bestScore}` +
@@ -433,6 +417,7 @@ export class GameOver extends State {
 
     const info = document.getElementById("info") as HTMLElement;
     info.style.display = "flex";
+
     const startMessage = document.getElementById("startMessage") as HTMLElement;
     startMessage.style.display = "none";
     const endMessage = document.getElementById("endMessage") as HTMLElement;

@@ -1,5 +1,9 @@
 import { SpeedSnek } from "./speedSnek";
 
-window.addEventListener("load", () => {
-  const speedSnek = new SpeedSnek();
-});
+addEventListener(
+  "load",
+  () => {
+    const speedSnek = new SpeedSnek();
+  },
+  { once: true }
+);
