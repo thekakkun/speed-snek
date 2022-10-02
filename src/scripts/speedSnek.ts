@@ -299,24 +299,26 @@ export class Set extends State {
     this.game.transitionTo(new Ready());
   }
 
-  public exit(): void {}
+  public exit(): void {
+    this.game.gameCanvas.element.removeEventListener(
+      "pointerleave",
+      this.notReady
+    );
+  }
 }
 
 // game is live
 export class Go extends State {
   constructor(graphics: Composite) {
     super(graphics);
+    this.snekLeave = this.snekLeave.bind(this);
   }
 
   public enter(): void {
     // checks that snek is within canvas
     this.game.gameCanvas.element.addEventListener(
       "pointerleave",
-      () => {
-        console.log("whoops!");
-        this.game.transitionTo(new GameOver("You crashed into a wall!"));
-      },
-      { once: true }
+      this.snekLeave
     );
 
     this.messageElement.innerHTML = "GO!";
@@ -370,6 +372,11 @@ export class Go extends State {
     }
   }
 
+  snekLeave() {
+    console.log("whoops!");
+    this.game.transitionTo(new GameOver("You crashed into a wall!"));
+  }
+
   snekSnekCollision() {
     for (let i = 2; i < this.game.snek.segmentPath.length - 1; i++) {
       if (
@@ -386,9 +393,9 @@ export class Go extends State {
 
   public exit(): void {
     const gameElement = this.game.gameCanvas.element;
+    gameElement.removeEventListener("pointerleave", this.snekLeave);
     gameElement.removeEventListener("pointermove", this.game.snek.moveHandler);
     removeEventListener("render", this.game.snek.moveHandler);
-    cancelAnimationFrame(this.game.reqId);
   }
 }
 
@@ -427,14 +434,10 @@ export class GameOver extends State {
       "restartButton"
     ) as HTMLButtonElement;
 
-    restartButton.addEventListener(
-      "click",
-      () => this.game.transitionTo(new Title()),
-      { once: true }
-    );
+    restartButton.addEventListener("click", () => location.reload(), {
+      once: true,
+    });
   }
 
-  public exit(): void {
-    location.reload();
-  }
+  public exit(): void {}
 }
