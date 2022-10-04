@@ -1,13 +1,16 @@
 import { Arc, dist, intersection } from "./geometry";
 import { Pellet, Snek } from "./model";
 import {
+  blue,
   Canvas,
   CanvasCircle,
   CanvasDisc,
   CanvasLine,
   Composite,
-  gameSize,
   SpeedGraphics,
+  gameSize,
+  green,
+  red,
 } from "./graphics";
 
 export class SpeedSnek {
@@ -45,7 +48,11 @@ export class SpeedSnek {
     this.gameCanvas = new Canvas("gameBoard", ...gameSize());
     const uiElement = document.getElementById("ui") as HTMLElement;
     uiElement.style.width = `${this.gameCanvas.width}px`;
-    this.speedCanvas = new Canvas("speedometer");
+    this.speedCanvas = new Canvas(
+      "speedometer",
+      undefined,
+      document.getElementById("score")?.clientHeight ?? 60
+    );
     this.inputType = "mouse";
 
     // initialize game objects
@@ -182,7 +189,7 @@ export class Ready extends State {
   public enter(): void {
     const pointerType = this.game.inputType === "mouse" ? "cursor" : "finger";
     this.messageElement.innerText = `${pointerType} on the circle to start`;
-    this.initUiGraphics();
+    this.initSpeedGraphics();
     this.initGameGraphics();
 
     const gameElement = this.game.gameCanvas.element;
@@ -193,46 +200,47 @@ export class Ready extends State {
     this.game.gameLoop();
   }
 
-  initUiGraphics() {
-    const speedCanvas = this.game.speedCanvas;
-    const speedContext = speedCanvas.context;
-
-    const speedGraphics = new SpeedGraphics(this.game, speedContext);
-
+  initSpeedGraphics() {
+    const speedGraphics = new SpeedGraphics(this.game, this.game.speedCanvas);
     this.graphics.add(speedGraphics);
   }
 
   initGameGraphics() {
-    const gameCanvas = this.game.gameCanvas;
-    const gameContext = this.game.gameCanvas.context;
-
     const snek = this.game.snek;
 
     const gameGraphics = new Composite();
-    const snekLine = new CanvasLine(
-      snek.segmentPath,
-      gameContext,
-      "green",
-      snek.snekWidth
-    );
 
     // draw cursor line (if in dev mode) and snek
     if (process.env.NODE_ENV === "development") {
-      const cursorLine = new CanvasLine(snek.path, gameContext, "red", 1);
+      const cursorLine = new CanvasLine(
+        snek.path,
+        this.game.gameCanvas,
+        red,
+        1
+      );
       gameGraphics.add(cursorLine);
     }
+    const snekLine = new CanvasLine(
+      snek.segmentPath,
+      this.game.gameCanvas,
+      green,
+      snek.snekWidth
+    );
     gameGraphics.add(snekLine);
     this.graphics.add(gameGraphics);
 
     // draw circle for starting area
     this.readyArea = {
-      center: { x: gameCanvas.width / 2, y: gameCanvas.height / 2 },
+      center: {
+        x: this.game.gameCanvas.width / 2,
+        y: this.game.gameCanvas.height / 2,
+      },
       radius: 30,
     };
     this.readyAreaGraphics = new CanvasCircle(
       this.readyArea,
-      gameContext,
-      "blue",
+      this.game.gameCanvas,
+      red,
       5
     );
     this.graphics.add(this.readyAreaGraphics);
@@ -330,12 +338,11 @@ export class Go extends State {
     const snek = this.game.snek;
     pellet.place(snek.segmentPath);
 
-    const gameContext = this.game.gameCanvas.context;
     this.graphics.add(
       new CanvasDisc(
         { center: this.game.pellet.loc!, radius: this.game.pellet.radius },
-        gameContext,
-        "blue"
+        this.game.gameCanvas,
+        blue
       )
     );
   }
@@ -414,7 +421,7 @@ export class GameOver extends State {
     const reasonElement = document.getElementById("reason") as HTMLElement;
     reasonElement.innerText = this.reason;
 
-    const scoreElement = document.getElementById("score") as HTMLElement;
+    const scoreElement = document.getElementById("finalScore") as HTMLElement;
     scoreElement.innerText = `Score: ${this.game.score}`;
 
     const bestElement = document.getElementById("best") as HTMLElement;

@@ -1,6 +1,12 @@
 import { Arc, Path, Point } from "./geometry";
 import { SpeedSnek } from "./speedSnek";
 
+export const white = "#fdfffc";
+export const red = "#ff3333";
+export const green = "#94e34f";
+export const blue = "#49b9e6";
+export const background = "#040406";
+
 export function gameSize(): [number, number] {
   let width: number;
   let height: number;
@@ -105,12 +111,12 @@ export class Composite extends Component {
 
 abstract class GraphicsComponent<Type> extends Component {
   public data: Type;
-  public target: CanvasRenderingContext2D;
+  public canvas: Canvas;
 
-  constructor(data: Type, context: CanvasRenderingContext2D) {
+  constructor(data: Type, canvas: Canvas) {
     super();
     this.data = data;
-    this.target = context;
+    this.canvas = canvas;
   }
 }
 
@@ -118,31 +124,27 @@ export class CanvasLine extends GraphicsComponent<Path> {
   color: string;
   width: number;
 
-  constructor(
-    data: Path,
-    target: CanvasRenderingContext2D,
-    color: string,
-    width: number
-  ) {
-    super(data, target);
+  constructor(data: Path, canvas: Canvas, color: string, width: number) {
+    super(data, canvas);
     this.color = color;
     this.width = width;
   }
 
   render() {
     const path = this.data;
+    const ctx = this.canvas.context;
 
     if (path.length !== 0) {
-      this.target.strokeStyle = this.color;
-      this.target.lineWidth = this.width;
-      this.target.lineCap = "round";
-      this.target.lineJoin = "round";
-      this.target.beginPath();
-      this.target.moveTo(path[0].x, path[0].y);
+      ctx.strokeStyle = this.color;
+      ctx.lineWidth = this.width;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      ctx.moveTo(path[0].x, path[0].y);
       path.forEach((point: Point) => {
-        this.target.lineTo(point.x, point.y);
+        ctx.lineTo(point.x, point.y);
       });
-      this.target.stroke();
+      ctx.stroke();
     }
   }
 }
@@ -151,52 +153,49 @@ export class CanvasCircle extends GraphicsComponent<Arc> {
   color: string;
   width: number;
 
-  constructor(
-    data: Arc,
-    target: CanvasRenderingContext2D,
-    color: string,
-    width: number
-  ) {
-    super(data, target);
+  constructor(data: Arc, canvas: Canvas, color: string, width: number) {
+    super(data, canvas);
     this.color = color;
     this.width = width;
   }
 
   render() {
-    this.target.beginPath();
-    this.target.strokeStyle = this.color;
-    this.target.lineWidth = this.width;
-    this.target.arc(
+    const ctx = this.canvas.context;
+    ctx.beginPath();
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = this.width;
+    ctx.arc(
       this.data.center.x,
       this.data.center.y,
       this.data.radius,
       0,
       Math.PI * 2
     );
-    this.target.stroke();
+    ctx.stroke();
   }
 }
 
 export class CanvasDisc extends GraphicsComponent<Arc> {
   color: string;
 
-  constructor(data: Arc, target: CanvasRenderingContext2D, color: string) {
-    super(data, target);
+  constructor(data: Arc, canvas: Canvas, color: string) {
+    super(data, canvas);
     this.color = color;
   }
 
   render() {
     if (this.data.center) {
-      this.target.fillStyle = this.color;
-      this.target.beginPath();
-      this.target.arc(
+      const ctx = this.canvas.context;
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(
         this.data.center.x,
         this.data.center.y,
         this.data.radius,
         0,
         Math.PI * 2
       );
-      this.target.fill();
+      ctx.fill();
     }
   }
 }
@@ -204,12 +203,8 @@ export class CanvasDisc extends GraphicsComponent<Arc> {
 export class CanvasRect extends GraphicsComponent<[Point, Point]> {
   color: string;
 
-  constructor(
-    data: [Point, Point],
-    target: CanvasRenderingContext2D,
-    color: string
-  ) {
-    super(data, target);
+  constructor(data: [Point, Point], canvas: Canvas, color: string) {
+    super(data, canvas);
     this.color = color;
   }
 
@@ -219,76 +214,60 @@ export class CanvasRect extends GraphicsComponent<[Point, Point]> {
       x: this.data[1].x - rectStart.x,
       y: this.data[1].y - rectStart.y,
     };
+    const ctx = this.canvas.context;
 
-    this.target.fillStyle = this.color;
-    this.target.fillRect(rectStart.x, rectStart.y, rectSize.x, rectSize.y);
+    ctx.fillStyle = this.color;
+    ctx.fillRect(rectStart.x, rectStart.y, rectSize.x, rectSize.y);
   }
 }
 
 export class SpeedGraphics extends GraphicsComponent<SpeedSnek> {
-  composite: Composite;
-
-  constructor(data: SpeedSnek, target: CanvasRenderingContext2D) {
-    super(data, target);
-    this.composite = new Composite();
+  constructor(data: SpeedSnek, canvas: Canvas) {
+    super(data, canvas);
   }
 
   render() {
-    // speedometer background
-    const speedCanvas = this.data.speedCanvas;
-    const background = new CanvasRect(
-      [
-        { x: 0, y: 0 },
-        { x: speedCanvas.width, y: speedCanvas.height },
-      ],
-      speedCanvas.context,
-      "#eee"
+    const barWidth = 5;
+    const margin = 3;
+    const border = parseInt(getComputedStyle(this.canvas.element).borderWidth);
+    const bars = Math.floor(
+      (this.canvas.width - border) / (barWidth + margin)
     );
 
-    // speed limit
-    const speedLimit = new CanvasRect(
-      [
-        { x: 0, y: 0 },
-        {
-          x: (speedCanvas.width * this.data.speedLimit) / this.data.maxSpeed,
-          y: speedCanvas.height,
-        },
-      ],
-      speedCanvas.context,
-      "orangered"
-    );
+    const speedLimitPercent = this.data.speedLimit / this.data.maxSpeed;
+    const speedPercent = this.data.snek.speed / this.data.maxSpeed;
 
-    // speed indicator
-    const indicator = new IndicatorGraphics(this.data, speedCanvas.context);
+    const ctx = this.canvas.context;
+    let color: typeof red | typeof white | typeof background;
 
-    this.composite.add(background);
-    this.composite.add(speedLimit);
-    this.composite.add(indicator);
+    for (let i = 0; i <= bars; i++) {
+      if (
+        (border + (barWidth + margin) * i - margin) /
+          (this.canvas.width - border * 2) <
+        speedLimitPercent
+      ) {
+        color = red;
+      } else if (
+        (border + (barWidth + margin) * i - margin) /
+          (this.canvas.width - border * 2) <
+        speedPercent
+      ) {
+        color = white;
+      } else {
+        color = background;
+      }
 
-    return this.composite.render();
-  }
-}
-
-export class IndicatorGraphics extends GraphicsComponent<SpeedSnek> {
-  constructor(data: SpeedSnek, target: CanvasRenderingContext2D) {
-    super(data, target);
-  }
-
-  render() {
-    const speedCanvas = this.data.speedCanvas;
-    const speed = Math.min(this.data.snek.speed, this.data.maxSpeed);
-    const indicatorLoc = (speedCanvas.width * speed) / this.data.maxSpeed;
-
-    this.target.fillStyle = "green";
-    this.target.beginPath();
-    // left base
-    this.target.moveTo(indicatorLoc - 5, this.data.speedCanvas.height);
-    // right base
-    this.target.lineTo(indicatorLoc + 5, this.data.speedCanvas.height);
-    // right tip
-    this.target.lineTo(indicatorLoc + 1, 10);
-    // left tip
-    this.target.lineTo(indicatorLoc - 1, 10);
-    this.target.fill();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = barWidth;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      ctx.moveTo((barWidth + margin) * i + barWidth / 2, margin);
+      ctx.lineTo(
+        (barWidth + margin) * i + barWidth / 2,
+        this.canvas.height - margin
+      );
+      ctx.stroke();
+    }
   }
 }
