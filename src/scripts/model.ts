@@ -43,12 +43,7 @@ export class Cursor {
     this.timeStamp.splice(ix);
   }
 
-  public setSpeed(window = 6) {
-    window = Math.min(window, this.path.length - 1);
-    if (window < 2) {
-      this.rawSpeed = 0;
-    }
-
+  public setSpeed(window = 1) {
     let travelled = 0;
     let time = 0;
     for (let i = 0; i < window; i++) {
@@ -91,6 +86,8 @@ export class Snek extends Cursor {
       };
 
       this.segmentPath.push(nextSeg);
+      this.path.push(nextSeg);
+      this.timeStamp.push(0);
     }
   }
 
@@ -125,8 +122,8 @@ export class Snek extends Cursor {
     }
   }
 
-  public setSpeed(window = 6) {
-    super.setSpeed(window);
+  public setSpeed() {
+    super.setSpeed();
 
     const alpha = 0.05;
     this.speed = alpha * this.rawSpeed + (1 - alpha) * this.speed;

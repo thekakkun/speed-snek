@@ -68,7 +68,10 @@ export class SpeedSnek {
       this.state.exit();
     }
 
-    console.log(`Context: Transition to ${(<any>state).constructor.name}.`);
+    if (process.env.NODE_ENV === "development") {
+      console.log(`Context: Transition to ${(<any>state).constructor.name}.`);
+    }
+
     this.state = state;
     this.state.setContext(this);
 
@@ -207,7 +210,6 @@ export class Ready extends State {
 
   initGameGraphics() {
     const snek = this.game.snek;
-
     const gameGraphics = new Composite();
 
     // draw cursor line (if in dev mode) and snek
