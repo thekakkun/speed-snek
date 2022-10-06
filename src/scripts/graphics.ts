@@ -222,50 +222,54 @@ export class CanvasRect extends GraphicsComponent<[Point, Point]> {
 }
 
 export class SpeedGraphics extends GraphicsComponent<SpeedSnek> {
+  barWidth: number;
+  margin: number;
+  border: number;
+  barCount: number;
+
   constructor(data: SpeedSnek, canvas: Canvas) {
     super(data, canvas);
+
+    this.barWidth = 6;
+    this.margin = 3;
+    this.border = parseInt(getComputedStyle(canvas.element).borderWidth);
+    this.barCount = Math.floor(
+      (canvas.width - this.border) / (this.barWidth + this.margin)
+    );
   }
 
   render() {
-    const barWidth = 5;
-    const margin = 3;
-    const border = parseInt(getComputedStyle(this.canvas.element).borderWidth);
-    const bars = Math.floor(
-      (this.canvas.width - border) / (barWidth + margin)
-    );
-
     const speedLimitPercent = this.data.speedLimit / this.data.maxSpeed;
     const speedPercent = this.data.snek.speed / this.data.maxSpeed;
 
     const ctx = this.canvas.context;
     let color: typeof red | typeof white | typeof background;
 
-    for (let i = 0; i <= bars; i++) {
-      if (
-        (border + (barWidth + margin) * i - margin) /
-          (this.canvas.width - border * 2) <
-        speedLimitPercent
-      ) {
+    for (let i = 0; i <= this.barCount; i++) {
+      const colorBoundary =
+        (this.border + (this.barWidth + this.margin) * i - this.margin) /
+        (this.canvas.width - this.border * 2);
+
+      if (colorBoundary < speedLimitPercent) {
         color = red;
-      } else if (
-        (border + (barWidth + margin) * i - margin) /
-          (this.canvas.width - border * 2) <
-        speedPercent
-      ) {
+      } else if (colorBoundary < speedPercent) {
         color = white;
       } else {
         color = background;
       }
 
       ctx.strokeStyle = color;
-      ctx.lineWidth = barWidth;
+      ctx.lineWidth = this.barWidth;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.beginPath();
-      ctx.moveTo((barWidth + margin) * i + barWidth / 2, margin);
+      ctx.moveTo(
+        (this.barWidth + this.margin) * i + this.barWidth / 2,
+        this.barWidth / 2
+      );
       ctx.lineTo(
-        (barWidth + margin) * i + barWidth / 2,
-        this.canvas.height - margin
+        (this.barWidth + this.margin) * i + this.barWidth / 2,
+        this.canvas.height - this.barWidth / 2
       );
       ctx.stroke();
     }
