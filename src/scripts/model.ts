@@ -45,8 +45,8 @@ export class Pointer {
   public moveHandler(e: PointerEvent | Event) {
     if (e instanceof PointerEvent) {
       const point = {
-        x: e.x - this.canvas.element.getBoundingClientRect().x,
-        y: e.y - this.canvas.element.getBoundingClientRect().y,
+        x: e.offsetX,
+        y: e.offsetY,
       };
 
       this.path.unshift(point);
@@ -156,6 +156,7 @@ export class Snek extends Pointer {
             radius: this.segLength,
           };
           segHead = intersection(seg, arc) as Point;
+
           this.segmentPath.push(segHead);
           if (this.segments < this.segmentPath.length) {
             break;

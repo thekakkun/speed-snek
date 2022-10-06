@@ -72,10 +72,10 @@ export function intersection(seg1: Path, seg2: Arc | Path): Point | null {
     t = (-b - Math.sqrt(discriminant)) / a;
 
     // recalculate if current t places intersection outside of line segment.
-    if (!(0 <= t && t <= 1)) {
+    if (Number.EPSILON <= Math.abs(t) - 1) {
       t = (-b + Math.sqrt(discriminant)) / a;
 
-      if (!(0 <= t && t <= 1)) {
+      if (Number.EPSILON <= Math.abs(t) - 1) {
         // none of the possible values for t resulted in an intersection.
         return null;
       }
@@ -96,7 +96,7 @@ export function intersection(seg1: Path, seg2: Arc | Path): Point | null {
     const t =
       ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) /
       ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
-    if (!(0 <= t && t <= 1)) {
+    if (Number.EPSILON <= Math.abs(t) - 1) {
       return null;
     }
 
@@ -107,7 +107,7 @@ export function intersection(seg1: Path, seg2: Arc | Path): Point | null {
     const u =
       ((x1 - x3) * (y1 - y2) - (y1 - y3) * (x1 - x2)) /
       ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
-    if (!(0 <= u && u <= 1)) {
+    if (Number.EPSILON <= Math.abs(u) - 1) {
       return null;
     }
 
