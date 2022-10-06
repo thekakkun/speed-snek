@@ -13,27 +13,32 @@ import {
   red,
 } from "./graphics";
 
+/**
+ * The main game object. Responsible for game metadata
+ * and for running the logic update and rendering loop,
+ * which change depending on the game state.
+ */
 export class SpeedSnek {
-  // store current state
   private state: State;
 
-  // gameplay status
   public score: number;
   public bestScore: number;
   public speedLimit: number;
   public speedIncrement: number;
   public maxSpeed: number;
 
-  // game canvases
   public speedCanvas: Canvas;
   public gameCanvas: Canvas;
   public reqId: number;
   public inputType: "mouse" | "touch";
 
-  // game model
+  /** The Snek object. */
   public snek: Snek;
   public pellet: Pellet;
 
+  /**
+   * Constructs a SpeedSnek.
+   */
   constructor() {
     // initialize game state
     this.score = 0;
@@ -57,12 +62,17 @@ export class SpeedSnek {
 
     // initialize game objects
     this.snek = new Snek(this.gameCanvas);
-    this.pellet = new Pellet(this.gameCanvas.element);
+    this.pellet = new Pellet(this.gameCanvas);
 
     // Start on title screen
     this.transitionTo(new Title());
   }
 
+  /**
+   * Runs the exit() method for the current state (if it exists),
+   * then transitions to a new state and runs its enter() method.
+   * @param state State to transition to.
+   */
   public transitionTo(state: State): void {
     if (this.state) {
       this.state.exit();
@@ -74,10 +84,13 @@ export class SpeedSnek {
 
     this.state = state;
     this.state.setContext(this);
-
     this.state.enter();
   }
 
+  /**
+   * Called when a pellet is eaten.
+   * Updates the score and speed limit
+   */
   public increaseScore() {
     this.score += 1;
     this.bestScore = Math.max(this.bestScore, this.score);
@@ -88,12 +101,15 @@ export class SpeedSnek {
     this.snek.grow();
   }
 
+  /** The main game loop. update() checks for logic,
+   * render() draws canvas graphics. */
   public gameLoop() {
     this.update();
     this.render();
     this.reqId = requestAnimationFrame(() => this.gameLoop());
   }
 
+  /** Shows the current and best scores. */
   public showScore(): void {
     const currentScore = document.getElementById("currentScore") as HTMLElement;
     currentScore.innerHTML = `Score: ${String(this.score).padStart(2, "\xa0")}`;
@@ -102,45 +118,71 @@ export class SpeedSnek {
     bestScore.innerHTML = `Best: ${String(this.bestScore).padStart(2, "\xa0")}`;
   }
 
+  /** Dispatches the update method to state. */
   public update(): void {
-    this.showScore();
     this.state.update();
   }
 
+  /**
+   * Clears the canvases, then dispaches render method to state
+   * to render a new frame.
+   *
+   * Also responsible for showing game score and triggering the render event.
+   */
   public render(): void {
     this.gameCanvas.clear();
     this.speedCanvas.clear();
+    this.showScore();
     this.state.graphics.render();
     dispatchEvent(new Event("render"));
   }
 }
 
+/**
+ * The abstract State class, declares properties and methods all
+ * States should implement.
+ */
 abstract class State {
   public game: SpeedSnek;
   public graphics: Composite;
 
   messageElement: HTMLElement;
 
+  /**
+   * Constructs a State.
+   * @param graphics A composite object wrapping all Canvas render methods.
+   */
   constructor(graphics = new Composite()) {
     this.graphics = graphics;
     this.messageElement = document.getElementById("message") as HTMLElement;
   }
 
+  /** Sets a backreference to the SpeedSnek object. */
   public setContext(game: SpeedSnek) {
     this.game = game;
   }
 
+  /** Runs when transitioning to State. */
   public abstract enter(): void;
+  /** Logic checking, triggered by the game loop. */
   public update(): void {}
+  /** Runs when transitioning from State. */
   public abstract exit(): void;
 }
 
-// Display game instructions, show the start button
-export class Title extends State {
+/**
+ * State: Displaying game instructions, listening to click on
+ * start button.
+ * @extends State
+ */
+class Title extends State {
+  /** Construct a Title State. */
   constructor() {
     super();
   }
 
+  /** On entering Title state, show instructions and
+   * await start button click. */
   public enter(): void {
     const info = document.getElementById("info") as HTMLElement;
     info.style.display = "flex";
@@ -149,15 +191,13 @@ export class Title extends State {
     const endMessage = document.getElementById("endMessage") as HTMLElement;
     endMessage.style.display = "none";
 
-    // Add a click listener to the start button
-    // Transition to Ready state when clicked
     const startButton = document.getElementById(
       "startButton"
     ) as HTMLButtonElement;
 
     startButton.addEventListener(
       "click",
-      (e) => {
+      () => {
         this.game.transitionTo(new Ready());
       },
       { once: true }
@@ -173,22 +213,32 @@ export class Title extends State {
     );
   }
 
+  /** Hide instruction elements on transition away from Title. */
   public exit(): void {
     const info = document.getElementById("info") as HTMLElement;
     info.style.display = "none";
   }
 }
 
-// UI and snek are live, ready for user input
-export class Ready extends State {
+/**
+ * State: UI and snek are rendered, ready for user input.
+ * @extends State
+ */
+class Ready extends State {
+  /** Transition to next state if user pointer within this area */
   readyArea!: Arc;
   readyAreaGraphics!: CanvasCircle;
 
+  /** Constructs a Ready State. */
   constructor() {
     super();
     this.checkPlayerReady = this.checkPlayerReady.bind(this);
   }
 
+  /**
+   * On transitioning to state, initialize game graphics,
+   * and await user input.
+   */
   public enter(): void {
     const pointerType = this.game.inputType === "mouse" ? "cursor" : "finger";
     this.messageElement.innerText = `${pointerType} on the circle to start`;
@@ -203,17 +253,19 @@ export class Ready extends State {
     this.game.gameLoop();
   }
 
+  /** Initialize the speedometer graphics Composite. */
   initSpeedGraphics() {
     const speedGraphics = new SpeedGraphics(this.game, this.game.speedCanvas);
     this.graphics.add(speedGraphics);
   }
 
+  /** Initialize the game graphics Composite. */
   initGameGraphics() {
     const snek = this.game.snek;
     const gameGraphics = new Composite();
 
-    // draw cursor line (if in dev mode) and snek
     if (process.env.NODE_ENV === "development") {
+      /** Raw input from cursor, only shown during dev */
       const cursorLine = new CanvasLine(
         snek.path,
         this.game.gameCanvas,
@@ -231,7 +283,6 @@ export class Ready extends State {
     gameGraphics.add(snekLine);
     this.graphics.add(gameGraphics);
 
-    // draw circle for starting area
     this.readyArea = {
       center: {
         x: this.game.gameCanvas.width / 2,
@@ -248,6 +299,10 @@ export class Ready extends State {
     this.graphics.add(this.readyAreaGraphics);
   }
 
+  /**
+   * Transition to Set state once pointer is within readyArea.
+   * @param e The PointerEvent from the listener.
+   */
   checkPlayerReady(e: PointerEvent) {
     const gameCanvas = this.game.gameCanvas;
     const gameWrapper = gameCanvas.element.parentElement as HTMLElement;
@@ -262,6 +317,7 @@ export class Ready extends State {
     }
   }
 
+  /** Remove readyArea on transition from Ready State. */
   public exit(): void {
     this.game.gameCanvas.element.removeEventListener(
       "pointermove",
@@ -271,16 +327,24 @@ export class Ready extends State {
   }
 }
 
-// UI and snek are live, showing countdown
-export class Set extends State {
+/**
+ * State: Speedometer and snek are responding to user input, showing countdown.
+ * @extends State
+ */
+class Set extends State {
   startTime: number;
 
+  /** Constructs a Set State. */
   constructor(graphics: Composite) {
     super(graphics);
     this.startTime = Date.now();
     this.notReady = this.notReady.bind(this);
   }
 
+  /**
+   * Add eventListeners for game interaction.
+   * Check that user hasn't stopped interacting with game canvas.
+   */
   public enter(): void {
     const gameElement = this.game.gameCanvas.element;
     gameElement.addEventListener("pointermove", this.game.snek.moveHandler);
@@ -290,6 +354,7 @@ export class Set extends State {
     });
   }
 
+  /** Start the countdown to transition to next State. */
   update() {
     const countStart = 3;
     const elapsed = (Date.now() - this.startTime) / 1000;
@@ -301,14 +366,13 @@ export class Set extends State {
     }
   }
 
+  /** Go back to Ready state. */
   notReady() {
-    const gameElement = this.game.gameCanvas.element;
-    gameElement.removeEventListener("pointermove", this.game.snek.moveHandler);
     removeEventListener("render", this.game.snek.moveHandler);
-
     this.game.transitionTo(new Ready());
   }
 
+  /** On transition from state, remove triggering notReady(). */
   public exit(): void {
     this.game.gameCanvas.element.removeEventListener(
       "pointerleave",
@@ -317,15 +381,19 @@ export class Set extends State {
   }
 }
 
-// game is live
-export class Go extends State {
+/**
+ * State: The player is now playing the game
+ * @extends State
+ */
+class Go extends State {
+  /** Constructs a Go State. */
   constructor(graphics: Composite) {
     super(graphics);
     this.snekLeave = this.snekLeave.bind(this);
   }
 
+  /** On transition to Go state, place the pellet in the canvas. */
   public enter(): void {
-    // checks that snek is within canvas
     this.game.gameCanvas.element.addEventListener(
       "pointerleave",
       this.snekLeave
@@ -349,12 +417,14 @@ export class Go extends State {
     );
   }
 
+  /** Check for scoring and game over. */
   update() {
     this.speedCheck();
     this.snekPelletCollision();
     this.snekSnekCollision();
   }
 
+  /** Transition to GameOver if under speed limit. */
   speedCheck() {
     if (this.game.snek.speed < this.game.speedLimit) {
       console.log("faster!");
@@ -362,6 +432,7 @@ export class Go extends State {
     }
   }
 
+  /** Check for snek eating pellet. */
   snekPelletCollision() {
     if (this.game.pellet.loc) {
       if (
@@ -381,11 +452,13 @@ export class Go extends State {
     }
   }
 
+  /** Trigger if snek has left the game canvas. */
   snekLeave() {
     console.log("whoops!");
     this.game.transitionTo(new GameOver("You crashed into a wall!"));
   }
 
+  /** Check for snek colliding with itself. */
   snekSnekCollision() {
     for (let i = 2; i < this.game.snek.segmentPath.length - 1; i++) {
       if (
@@ -400,6 +473,7 @@ export class Go extends State {
     }
   }
 
+  /** Remove gameplay event listeners on transition to next State. */
   public exit(): void {
     const gameElement = this.game.gameCanvas.element;
     gameElement.removeEventListener("pointerleave", this.snekLeave);
@@ -408,15 +482,26 @@ export class Go extends State {
   }
 }
 
-// Snek is dead :(
-export class GameOver extends State {
+/**
+ * State: Snek is dead ;(.
+ * @extends State
+ */
+class GameOver extends State {
   reason: string;
 
+  /**
+   * Constructs a GameOver State.
+   * @param reason Reason for game over.
+   */
   constructor(reason: string) {
     super();
     this.reason = reason;
   }
 
+  /**
+   * On transitioning to GameOver, display the info elements,
+   * with information on the last game, and a button to play again.
+   */
   public enter(): void {
     localStorage.setItem("bestScore", String(this.game.bestScore));
 
