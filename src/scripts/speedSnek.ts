@@ -422,6 +422,7 @@ class Go extends State {
     this.speedCheck();
     this.snekPelletCollision();
     this.snekSnekCollision();
+    this.messageElement.innerText = String(this.game.snek.speed.toPrecision(3));
   }
 
   /** Transition to GameOver if under speed limit. */
@@ -436,9 +437,9 @@ class Go extends State {
   snekPelletCollision() {
     if (this.game.pellet.loc) {
       if (
-        2 <= this.game.snek.segmentPath.length &&
+        2 <= this.game.snek.path.length &&
         intersection(
-          [this.game.snek.segmentPath[0], this.game.snek.segmentPath[1]],
+          [this.game.snek.path[0], this.game.snek.path[1]],
           {
             center: this.game.pellet.loc,
             radius: this.game.pellet.radius + this.game.snek.snekWidth / 2,

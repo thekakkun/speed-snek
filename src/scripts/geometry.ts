@@ -72,10 +72,10 @@ export function intersection(seg1: Path, seg2: Arc | Path): Point | null {
     t = (-b - Math.sqrt(discriminant)) / a;
 
     // recalculate if current t places intersection outside of line segment.
-    if (Number.EPSILON <= Math.abs(t) - 1) {
+    if (!inRange(t)) {
       t = (-b + Math.sqrt(discriminant)) / a;
 
-      if (Number.EPSILON <= Math.abs(t) - 1) {
+      if (!inRange(t)) {
         // none of the possible values for t resulted in an intersection.
         return null;
       }
@@ -89,14 +89,18 @@ export function intersection(seg1: Path, seg2: Arc | Path): Point | null {
     const [{ x: x1, y: y1 }, { x: x2, y: y2 }] = seg1;
     const [{ x: x3, y: y3 }, { x: x4, y: y4 }] = seg2;
 
+    /** If this is zero, line segments are parallel. */
+    const denominator = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+    if (Math.abs(denominator) < Number.EPSILON) {
+      return null;
+    }
+
     /**
      * Parameter representing the line through seg1.
      * Falls between the two points of seg1 if  0 <= t <= 1.
      */
-    const t =
-      ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) /
-      ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
-    if (Number.EPSILON <= Math.abs(t) - 1) {
+    const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denominator;
+    if (!inRange(t, true)) {
       return null;
     }
 
@@ -104,10 +108,8 @@ export function intersection(seg1: Path, seg2: Arc | Path): Point | null {
      * Parameter representing the line through seg2.
      * Falls between the two points of seg2 if  0 <= u <= 1.
      */
-    const u =
-      ((x1 - x3) * (y1 - y2) - (y1 - y3) * (x1 - x2)) /
-      ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
-    if (Number.EPSILON <= Math.abs(u) - 1) {
+    const u = ((x1 - x3) * (y1 - y2) - (y1 - y3) * (x1 - x2)) / denominator;
+    if (!inRange(u, true)) {
       return null;
     }
 
@@ -116,4 +118,32 @@ export function intersection(seg1: Path, seg2: Arc | Path): Point | null {
       y: y1 + t * (y2 - y1),
     };
   }
+}
+
+/**
+ * Checks if parameter is within range,
+ * with considerations for floating point error.
+ * @param t parameter to test for.
+ * @param coyote if true, exclude range boundary within floating point error.
+ * @param range minimum and maximum acceptable value for t.
+ * @returns whether t is between min and max.
+ */
+function inRange(
+  t: number,
+  coyote = false,
+  range: [number, number] = [0, 1]
+): boolean {
+  const [min, max] = range;
+  const tolerance = 1;
+  /** t is equal to range boundary within floating point error */
+  const boundary =
+    Math.abs(t - min) < tolerance * Number.EPSILON ||
+    Math.abs(t - max) < tolerance * Number.EPSILON;
+
+  if (boundary) {
+    return !coyote;
+  }
+  /** t is between min and max */
+  const within = min < t && t < max;
+  return within;
 }
