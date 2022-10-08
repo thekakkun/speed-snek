@@ -1,12 +1,17 @@
 import { Arc, Path, Point } from "./geometry";
 import { SpeedSnek } from "./speedSnek";
 
+// TODO: Can I share these variables with SASS?
 export const white = "#fdfffc";
 export const red = "#ff3333";
 export const green = "#94e34f";
 export const blue = "#49b9e6";
 export const background = "#040406";
 
+/**
+ * Calculate the game canvas size and orientation, based on available space.
+ * @returns The width and height of the game canvas.
+ */
 export function gameSize(): [number, number] {
   let width: number;
   let height: number;
@@ -33,12 +38,19 @@ export function gameSize(): [number, number] {
   return [width, height];
 }
 
+/** Class representing the canvas object. */
 export class Canvas {
   height: number;
   width: number;
   element: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
 
+  /**
+   * Create a Canvas.
+   * @param id The id of the canvas.
+   * @param width Width of the canvas, pulled from calcualted width if omitted.
+   * @param height Width of the canvas, pulled from calcualted width if omitted.
+   */
   constructor(id: string, width?: number, height?: number) {
     this.element = document.getElementById(id) as HTMLCanvasElement;
     this.context = this.element.getContext("2d") as CanvasRenderingContext2D;
@@ -56,30 +68,42 @@ export class Canvas {
     this.setSize();
   }
 
+  /**
+   * Scales the canvas so that there is no blurring for high density displays.
+   */
   setSize() {
     this.element.style.width = `${this.width}px`;
     this.element.style.height = `${this.height}px`;
 
-    // Scale for high resolution displays
     this.element.width = Math.floor(this.width * devicePixelRatio);
     this.element.height = Math.floor(this.height * devicePixelRatio);
 
-    // scale the output
     this.context.scale(devicePixelRatio, devicePixelRatio);
   }
 
+  /** wipe the canvas clean. */
   clear() {
     this.context.clearRect(0, 0, this.width, this.height);
   }
 }
 
+/** Defines the need for a render() method for
+ * both complex and simple Components. */
 abstract class Component {
   protected parent!: Component | null;
 
+  /**
+   * Set the parent Component.
+   * @param parent The parent Component.
+   */
   public setParent(parent: Component | null) {
     this.parent = parent;
   }
 
+  /**
+   * Get the parent Component.
+   * @returns The parent Component or null if no parent.
+   */
   public getParent(): Component | null {
     return this.parent;
   }
@@ -87,14 +111,27 @@ abstract class Component {
   public abstract render(): void;
 }
 
+/**
+ * Composite objects represent complex Components with children.
+ * Calling render() will delegate actual work to its children.
+ * @extends Component
+ */
 export class Composite extends Component {
   protected children: Component[] = [];
 
+  /**
+   * Adds a child component.
+   * @param component The child component to add to Compsite.
+   */
   public add(component: Component) {
     this.children.push(component);
     component.setParent(this);
   }
 
+  /**
+   * Removes a child component.
+   * @param component The child component to remove from Composite.
+   */
   public remove(component: Component) {
     const ix = this.children.indexOf(component);
     this.children.splice(ix, 1);
@@ -102,6 +139,7 @@ export class Composite extends Component {
     component.setParent(null);
   }
 
+  /** Delegate render() method to its children. */
   public render() {
     for (const child of this.children) {
       child.render();
@@ -109,10 +147,19 @@ export class Composite extends Component {
   }
 }
 
+/**
+ * A Component with parameters defining the data source and output target
+ * @extends Component
+ */
 abstract class GraphicsComponent<Type> extends Component {
   public data: Type;
   public canvas: Canvas;
 
+  /**
+   * Create a GraphicsComponent
+   * @param data The data source.
+   * @param canvas Canvas to render data on.
+   */
   constructor(data: Type, canvas: Canvas) {
     super();
     this.data = data;
@@ -120,16 +167,28 @@ abstract class GraphicsComponent<Type> extends Component {
   }
 }
 
+/**
+ * Used to draw a line on the canvas.
+ * @extends GraphicsComponent
+ */
 export class CanvasLine extends GraphicsComponent<Path> {
   color: string;
   width: number;
 
+  /**
+   * Constructs a CanvasLine
+   * @param data A list of coordinates for the line.
+   * @param canvas The Canvas to render to.
+   * @param color The color of the line.
+   * @param width The width of the line.
+   */
   constructor(data: Path, canvas: Canvas, color: string, width: number) {
     super(data, canvas);
     this.color = color;
     this.width = width;
   }
 
+  /** Draw a line on the canvas. */
   render() {
     const path = this.data;
     const ctx = this.canvas.context;
@@ -149,16 +208,28 @@ export class CanvasLine extends GraphicsComponent<Path> {
   }
 }
 
+/**
+ * Used to draw a circle (unfilled) on the canvas.
+ * @extends GraphicsComponent
+ */
 export class CanvasCircle extends GraphicsComponent<Arc> {
   color: string;
   width: number;
 
+  /**
+   * Constructs a CanvasCircle.
+   * @param data The center and radius of the circle
+   * @param canvas The Canvas to render to.
+   * @param color The color of the circle.
+   * @param width The width of the line.
+   */
   constructor(data: Arc, canvas: Canvas, color: string, width: number) {
     super(data, canvas);
     this.color = color;
     this.width = width;
   }
 
+  /** Draw a circle on the canvas. */
   render() {
     const ctx = this.canvas.context;
     ctx.beginPath();
@@ -175,14 +246,25 @@ export class CanvasCircle extends GraphicsComponent<Arc> {
   }
 }
 
+/**
+ * Used to draw a disc (filled) on the canvas.
+ * @extends GraphicsComponent
+ */
 export class CanvasDisc extends GraphicsComponent<Arc> {
   color: string;
 
+  /**
+   * Constructs a CanvasDisc
+   * @param data The center and radius of the circle
+   * @param canvas The Canvas to render to.
+   * @param color The color of the circle.
+   */
   constructor(data: Arc, canvas: Canvas, color: string) {
     super(data, canvas);
     this.color = color;
   }
 
+  /** Draw a disc on the canvas. */
   render() {
     if (this.data.center) {
       const ctx = this.canvas.context;
@@ -200,33 +282,21 @@ export class CanvasDisc extends GraphicsComponent<Arc> {
   }
 }
 
-export class CanvasRect extends GraphicsComponent<[Point, Point]> {
-  color: string;
-
-  constructor(data: [Point, Point], canvas: Canvas, color: string) {
-    super(data, canvas);
-    this.color = color;
-  }
-
-  render() {
-    const rectStart = this.data[0];
-    const rectSize = {
-      x: this.data[1].x - rectStart.x,
-      y: this.data[1].y - rectStart.y,
-    };
-    const ctx = this.canvas.context;
-
-    ctx.fillStyle = this.color;
-    ctx.fillRect(rectStart.x, rectStart.y, rectSize.x, rectSize.y);
-  }
-}
-
+/**
+ * Used to draw the speedometer.
+ * @extends GraphicsComponent
+ */
 export class SpeedGraphics extends GraphicsComponent<SpeedSnek> {
   barWidth: number;
   margin: number;
   border: number;
   barCount: number;
 
+  /**
+   * Construct a SpeedGraphics.
+   * @param data contains various pieces of data regarding speed.
+   * @param canvas The Canvas to render to.
+   */
   constructor(data: SpeedSnek, canvas: Canvas) {
     super(data, canvas);
 
@@ -238,6 +308,7 @@ export class SpeedGraphics extends GraphicsComponent<SpeedSnek> {
     );
   }
 
+  /** Draw the speedometer */
   render() {
     const speedLimitPercent = this.data.speedLimit / this.data.maxSpeed;
     const speedPercent = this.data.snek.speed / this.data.maxSpeed;

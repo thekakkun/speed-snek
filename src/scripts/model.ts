@@ -1,17 +1,30 @@
 import { dist, intersection, Path, Point } from "./geometry";
 import { Canvas } from "./graphics";
 
+/**
+ * Return a random number between min and max.
+ * @param min Smallest value number can take (inclusive).
+ * @param max Largest value number can take (exclusive).
+ * @returns A random number between min and max.
+ */
 function randomBetween(min: number, max: number) {
   return Math.random() * (max - min) + min;
 }
 
-export class Cursor {
+/**
+ * Holds information about the user's pointer movement.
+ */
+export class Pointer {
   canvas: Canvas;
   path: Path;
-  timeStamp: number[];
+  timeStamp: DOMHighResTimeStamp[];
   rawSpeed: number;
   lastEvent: string;
 
+  /**
+   * Constructs a Pointer.
+   * @param canvas The canvas element capturing pointer info.
+   */
   constructor(canvas: Canvas) {
     this.canvas = canvas;
     this.path = [];
@@ -21,28 +34,46 @@ export class Cursor {
     this.moveHandler = this.moveHandler.bind(this);
   }
 
+  /**
+   * Handles incoming events and adds the data to Pointer.
+   * 'render' event is used to see if user has stopped moving,
+   * and will only update the path and timestamp data if
+   * no pointermove events coming.
+   * @param e The event, PointerEvent if triggered by 'pointermove'
+   * and Event if triggered by 'render'.
+   */
   public moveHandler(e: PointerEvent | Event) {
     if (e instanceof PointerEvent) {
       const point = {
-        x: e.x - this.canvas.element.getBoundingClientRect().x,
-        y: e.y - this.canvas.element.getBoundingClientRect().y,
+        x: e.offsetX,
+        y: e.offsetY,
       };
 
       this.path.unshift(point);
-      this.timeStamp.unshift(e.timeStamp);
     } else if (this.lastEvent === e.type && this.path.length) {
       this.path.unshift(this.path[0]);
-      this.timeStamp.unshift(e.timeStamp);
     }
 
+    this.timeStamp.unshift(e.timeStamp);
     this.lastEvent = e.type;
+    this.setSpeed();
   }
 
+  /**
+   * Trims unnecessary data in path and timeStamp.
+   * Meant to only leave enough to calculate the position of a newly added segment.
+   * @param ix The index of the last necessary point in path.
+   */
   public trim(ix: number) {
     this.path.splice(ix);
     this.timeStamp.splice(ix);
   }
 
+  /**
+   * Calculates the speed based off of path and timeStamp,
+   * Set window value to use a moving average.
+   * @param window The number of data points to average over.
+   */
   public setSpeed(window = 1) {
     window = Math.min(window, this.path.length - 1);
 
@@ -61,13 +92,21 @@ export class Cursor {
   }
 }
 
-export class Snek extends Cursor {
+/**
+ * Holds information about the Snek.
+ * @extends Pointer
+ */
+export class Snek extends Pointer {
   segments: number;
   segLength: number;
   segmentPath: Path;
   snekWidth: number;
   speed: number;
 
+  /**
+   * Constructs a Snek.
+   * @param canvas The canvas element capturing pointer info.
+   */
   constructor(canvas: Canvas) {
     super(canvas);
 
@@ -93,12 +132,18 @@ export class Snek extends Cursor {
     }
   }
 
+  /**
+   * Handles incoming events and updates Snek properties.
+   * @param e The event, PointerEvent if triggered by 'pointermove'
+   * and Event if triggered by 'render'.
+   */
   public moveHandler(e: PointerEvent | Event) {
     super.moveHandler(e);
     this.calculateSegments();
     this.setSpeed();
   }
 
+  /** Calculate the position of the segments, based on path. */
   public calculateSegments() {
     Object.assign(this.segmentPath, this.path, { length: 1 });
     let segHead = this.segmentPath[this.segmentPath.length - 1];
@@ -111,6 +156,7 @@ export class Snek extends Cursor {
             radius: this.segLength,
           };
           segHead = intersection(seg, arc) as Point;
+
           this.segmentPath.push(segHead);
           if (this.segments < this.segmentPath.length) {
             break;
@@ -124,10 +170,18 @@ export class Snek extends Cursor {
     }
   }
 
+  /** Calculate a smoothed speed, based on the raw value.
+   * Smoothing is done via exponential smoothing.
+   */
   public setSpeed(window = 1) {
     window = Math.min(window, this.path.length - 1);
     super.setSpeed(window);
 
+    /**
+     * The time constant.
+     * The time it takes a unit step function to reach
+     * 63.2^ of the original signal.
+     * */
     const tau = 0.5;
     const tDelta = (this.timeStamp[0] - this.timeStamp[window]) / 1000 / window;
     const alpha = 1 - Math.exp(-tDelta / tau);
@@ -140,36 +194,43 @@ export class Snek extends Cursor {
   }
 }
 
+/**
+ * Holds information about the Pellet.
+ */
 export class Pellet {
-  target: HTMLCanvasElement;
+  canvas: Canvas;
   loc: Point;
   radius: number;
 
-  constructor(target: HTMLCanvasElement) {
+  /**
+   * Construct a Pellet.
+   * @param canvas The Canvas object where pellet is placed.
+   */
+  constructor(canvas: Canvas) {
     this.radius = 15;
-    this.target = target;
+    this.canvas = canvas;
     this.loc = Object.create({});
   }
 
-  // Choose random point within target until
-  // no walls or snek within buffer range
-  place(noGo: Path, buffer = 30) {
-    if (noGo !== undefined) {
-      noGo = noGo;
-    }
-
+  /**
+   * Choose a location to place the pellet within the canvas.
+   * Must not be within buffer range from canvas borders or noGo path.
+   * @param noGo Path where no pellet can be placed within buffer range.
+   * @param buffer The size of the buffer.
+   */
+  place(noGo?: Path, buffer = 30) {
     let loc: Point;
     let locValid: boolean;
 
     while (true) {
       locValid = true;
       loc = {
-        x: randomBetween(buffer, this.target.clientWidth - buffer),
-        y: randomBetween(buffer, this.target.clientHeight - buffer),
+        x: randomBetween(buffer, this.canvas.width - buffer),
+        y: randomBetween(buffer, this.canvas.height - buffer),
       };
 
       // loc is fine if there is no noGo
-      if (noGo.length === 0) {
+      if (noGo === undefined) {
         this.loc = loc;
         break;
       }
@@ -189,8 +250,7 @@ export class Pellet {
       }
 
       if (locValid) {
-        Object.assign(this.loc!, loc);
-        // this.loc = loc;
+        Object.assign(this.loc, loc);
         break;
       }
     }
