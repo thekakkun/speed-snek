@@ -422,7 +422,11 @@ class Go extends State {
     this.speedCheck();
     this.snekPelletCollision();
     this.snekSnekCollision();
-    this.messageElement.innerText = String(this.game.snek.speed.toPrecision(3));
+    if (process.env.NODE_ENV === "development") {
+      this.messageElement.innerText = String(
+        this.game.snek.speed.toPrecision(3)
+      );
+    }
   }
 
   /** Transition to GameOver if under speed limit. */
