@@ -128,12 +128,8 @@ export function intersection(seg1: Path, seg2: Arc | Path): Point | null {
  * @param range minimum and maximum acceptable value for t.
  * @returns whether t is between min and max.
  */
-function inRange(
-  t: number,
-  coyote = false,
-  range: [number, number] = [0, 1]
-): boolean {
-  const [min, max] = range;
+function inRange(t: number, coyote = false, range?: [number, number]): boolean {
+  const [min, max] = range ?? [0, 1];
   const tolerance = 1;
   /** t is equal to range boundary within floating point error */
   const boundary =
