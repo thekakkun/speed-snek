@@ -22,12 +22,24 @@ jobs:
         run: |
           npm ci
           npx parcel build --public-url ${{ github.event.repository.name }}/
-
+      
+      - name: Archive artifact
+        run: |
+          --dereference --hard-dereference \
+          --directory "dist/" \
+          -cvf "$RUNNER_TEMP/artifact.tar" \
+          --exclude=.git \
+          --exclude=.github \
+          .
+        env:
+          INPUT_PATH: ${{ inputs.path }}
+          
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@main
         with:
           name: github-pages
-          path: dist/
+          path: ${{ runner.temp }}/artifact.tar
+          retention-days: 1
         
   deploy:
     needs: build
