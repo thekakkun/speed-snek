@@ -107,12 +107,13 @@ export class Snek extends Pointer {
    * Constructs a Snek.
    * @param canvas The canvas element capturing pointer info.
    */
-  constructor(canvas: Canvas) {
+  constructor(canvas: Canvas, scale?: number) {
     super(canvas);
+    scale = scale ?? 1;
 
     this.segments = 4;
-    this.segLength = 50;
-    this.snekWidth = 10;
+    this.segLength = 50 * scale;
+    this.snekWidth = 10 * scale;
     this.speed = 0;
     this.segmentPath = [
       {
@@ -206,8 +207,10 @@ export class Pellet {
    * Construct a Pellet.
    * @param canvas The Canvas object where pellet is placed.
    */
-  constructor(canvas: Canvas) {
-    this.radius = 15;
+  constructor(canvas: Canvas, scale?: number) {
+    scale = scale ?? 1;
+
+    this.radius = 15 * scale;
     this.canvas = canvas;
     this.loc = Object.create({});
   }
@@ -252,7 +255,7 @@ export class Pellet {
         break;
       }
     }
-    
+
     Object.assign(this.loc, loc);
   }
 }
