@@ -1,11 +1,10 @@
 import { SpeedSnek } from "./speedSnek";
 
 addEventListener("load", () => {
-  dispatchEvent(new Event("newGame"));
-});
+  const speedSnek = new SpeedSnek();
+  speedSnek.newGame();
 
-let speedSnek: SpeedSnek;
-const info = `\
+  console.log(`\
 ==================
 
 🐍 says,
@@ -15,9 +14,5 @@ const info = `\
       https://ko-fi.com/kakkun
 
 ==================\
-`;
-
-addEventListener("newGame", () => {
-  console.log(info);
-  speedSnek = new SpeedSnek();
+  `);
 });
