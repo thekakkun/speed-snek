@@ -40,14 +40,7 @@ export class SpeedSnek {
    * Constructs a SpeedSnek.
    */
   constructor() {
-    // initialize game state
-    this.score = 0;
-    const bestScore = localStorage.getItem("bestScore");
-    this.bestScore = bestScore ? Number(bestScore) : 0;
-    this.speedLimit = 0;
-    this.speedIncrement = 0.05;
-    this.maxSpeed = 5;
-    this.showScore();
+    this.gameLoop = this.gameLoop.bind(this);
 
     // initialize canvas
     this.gameCanvas = new Canvas("gameBoard", ...gameSize());
@@ -59,13 +52,6 @@ export class SpeedSnek {
       document.getElementById("score")?.clientHeight ?? 60
     );
     this.inputType = "mouse";
-
-    // initialize game objects
-    this.snek = new Snek(this.gameCanvas);
-    this.pellet = new Pellet(this.gameCanvas);
-
-    // Start on title screen
-    this.transitionTo(new Title());
   }
 
   /**
@@ -87,6 +73,25 @@ export class SpeedSnek {
     this.state.enter();
   }
 
+  /** Start a new game */
+  public newGame() {
+    // initialize game state
+    this.score = 0;
+    const bestScore = localStorage.getItem("bestScore");
+    this.bestScore = bestScore ? Number(bestScore) : 0;
+    this.speedLimit = 0;
+    this.speedIncrement = 0.05;
+    this.maxSpeed = 5;
+    this.showScore()
+
+    // initialize game objects
+    this.snek = new Snek(this.gameCanvas);
+    this.pellet = new Pellet(this.gameCanvas);
+
+    // display the title screen
+    this.transitionTo(new Title());
+  }
+
   /**
    * Called when a pellet is eaten.
    * Updates the score and speed limit
@@ -106,7 +111,7 @@ export class SpeedSnek {
   public gameLoop() {
     this.update();
     this.render();
-    this.reqId = requestAnimationFrame(() => this.gameLoop());
+    this.reqId = requestAnimationFrame(this.gameLoop);
   }
 
   /** Shows the current and best scores. */
@@ -250,7 +255,7 @@ class Ready extends State {
       gameElement.releasePointerCapture(e.pointerId);
     });
     gameElement.addEventListener("pointermove", this.checkPlayerReady);
-    this.game.gameLoop();
+    this.game.reqId = requestAnimationFrame(this.game.gameLoop);
   }
 
   /** Initialize the speedometer graphics Composite. */
@@ -530,10 +535,16 @@ class GameOver extends State {
       "restartButton"
     ) as HTMLButtonElement;
 
-    restartButton.addEventListener("click", () => {
-      dispatchEvent(new Event("newGame"));
-    });
+    restartButton.addEventListener(
+      "click",
+      () => {
+        this.game.newGame();
+      },
+      { once: true }
+    );
   }
 
-  public exit(): void {}
+  public exit(): void {
+    cancelAnimationFrame(this.game.reqId);
+  }
 }
