@@ -231,7 +231,6 @@ export class Pellet {
 
       // loc is fine if there is no noGo
       if (noGo === undefined) {
-        this.loc = loc;
         break;
       }
 
@@ -250,9 +249,10 @@ export class Pellet {
       }
 
       if (locValid) {
-        Object.assign(this.loc, loc);
         break;
       }
     }
+    
+    Object.assign(this.loc, loc);
   }
 }

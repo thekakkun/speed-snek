@@ -55,15 +55,8 @@ export class Canvas {
     this.element = document.getElementById(id) as HTMLCanvasElement;
     this.context = this.element.getContext("2d") as CanvasRenderingContext2D;
 
-    if (width === undefined) {
-      width = this.element.clientWidth;
-    }
-    if (height === undefined) {
-      height = this.element.clientHeight;
-    }
-
-    this.width = width;
-    this.height = height;
+    this.width = width ?? this.element.clientWidth;
+    this.height = height ?? this.element.clientHeight;
 
     this.setSize();
   }
