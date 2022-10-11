@@ -29,6 +29,7 @@ export class SpeedSnek {
 
   public speedCanvas: Canvas;
   public gameCanvas: Canvas;
+  public scale: number;
   public reqId: number;
   public inputType: string;
 
@@ -52,6 +53,8 @@ export class SpeedSnek {
       undefined,
       document.getElementById("score")?.clientHeight ?? 60
     );
+    this.scale = Math.min(this.gameCanvas.width, this.gameCanvas.height) / 600;
+    console.log(this.scale);
     this.inputType = "";
   }
 
@@ -81,12 +84,12 @@ export class SpeedSnek {
     const bestScore = localStorage.getItem("bestScore");
     this.bestScore = bestScore ? Number(bestScore) : 0;
     this.speedLimit = 0;
-    this.speedIncrement = 0.05;
-    this.maxSpeed = 5;
+    this.speedIncrement = 0.05 * this.scale;
+    this.maxSpeed = 5 * this.scale;
 
     // initialize game objects
-    this.snek = new Snek(this.gameCanvas);
-    this.pellet = new Pellet(this.gameCanvas);
+    this.snek = new Snek(this.gameCanvas, this.scale);
+    this.pellet = new Pellet(this.gameCanvas, this.scale);
 
     // display the title screen
     this.transitionTo(new Title());
@@ -429,7 +432,7 @@ class Go extends State {
     this.snekPelletCollision();
     this.snekSnekCollision();
     if (process.env.NODE_ENV === "development") {
-      this.messageElement.innerText = `x: ${this.game.snek.path[0].x} y: ${this.game.snek.path[0].y}`;
+      // this.messageElement.innerText = `x: ${this.game.snek.path[0].x} y: ${this.game.snek.path[0].y}`;
     }
   }
 
