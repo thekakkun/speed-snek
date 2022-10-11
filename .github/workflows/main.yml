@@ -22,7 +22,7 @@ jobs:
         run: |
           npm ci
           npx parcel build --public-url /${{ github.event.repository.name }}
-      
+
       - name: Archive artifact
         run: |
           tar \
@@ -34,25 +34,25 @@ jobs:
             .
         env:
           INPUT_PATH: ${{ inputs.path }}
-          
+
       - name: Upload artifact
         uses: actions/upload-artifact@main
         with:
           name: github-pages
           path: ${{ runner.temp }}/artifact.tar
           retention-days: 1
-        
+
   deploy:
     needs: build
-    
+
     permissions:
       pages: write
       id-token: write
-      
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-  
+
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to GitHub Pages

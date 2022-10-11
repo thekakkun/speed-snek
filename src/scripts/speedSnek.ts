@@ -30,7 +30,7 @@ export class SpeedSnek {
   public speedCanvas: Canvas;
   public gameCanvas: Canvas;
   public reqId: number;
-  public inputType: "mouse" | "touch";
+  public inputType: string;
 
   /** The Snek object. */
   public snek: Snek;
@@ -45,13 +45,14 @@ export class SpeedSnek {
     // initialize canvas
     this.gameCanvas = new Canvas("gameBoard", ...gameSize());
     const uiElement = document.getElementById("ui") as HTMLElement;
+    this.showScore();
     uiElement.style.width = `${this.gameCanvas.width}px`;
     this.speedCanvas = new Canvas(
       "speedometer",
       undefined,
       document.getElementById("score")?.clientHeight ?? 60
     );
-    this.inputType = "mouse";
+    this.inputType = "";
   }
 
   /**
@@ -82,7 +83,6 @@ export class SpeedSnek {
     this.speedLimit = 0;
     this.speedIncrement = 0.05;
     this.maxSpeed = 5;
-    this.showScore()
 
     // initialize game objects
     this.snek = new Snek(this.gameCanvas);
@@ -117,10 +117,16 @@ export class SpeedSnek {
   /** Shows the current and best scores. */
   public showScore(): void {
     const currentScore = document.getElementById("currentScore") as HTMLElement;
-    currentScore.innerHTML = `Score: ${String(this.score).padStart(2, "\xa0")}`;
+    currentScore.innerHTML = `Score: ${String(this.score ?? 0).padStart(
+      2,
+      "\xa0" // A non-breaking space, since multiple spaces are ignored in HTML
+    )}`;
 
     const bestScore = document.getElementById("bestScore") as HTMLElement;
-    bestScore.innerHTML = `Best: ${String(this.bestScore).padStart(2, "\xa0")}`;
+    bestScore.innerHTML = `Best: ${String(this.bestScore ?? 0).padStart(
+      2,
+      "\xa0" // A non-breaking space, since multiple spaces are ignored in HTML
+    )}`;
   }
 
   /** Dispatches the update method to state. */
@@ -200,22 +206,17 @@ class Title extends State {
       "startButton"
     ) as HTMLButtonElement;
 
-    startButton.addEventListener(
-      "click",
-      () => {
-        this.game.transitionTo(new Ready());
-      },
-      { once: true }
-    );
-    startButton.addEventListener(
-      "pointerup",
-      (e) => {
-        if (e.pointerType === "touch") {
-          this.game.inputType = e.pointerType;
-        }
-      },
-      { once: true }
-    );
+    startButton.addEventListener("pointerdown", (e) => {
+      this.game.inputType = e.pointerType;
+
+      startButton.addEventListener(
+        "pointerup",
+        () => {
+          this.game.transitionTo(new Ready());
+        },
+        { once: true }
+      );
+    });
   }
 
   /** Hide instruction elements on transition away from Title. */
@@ -245,7 +246,7 @@ class Ready extends State {
    * and await user input.
    */
   public enter(): void {
-    const pointerType = this.game.inputType === "mouse" ? "cursor" : "finger";
+    const pointerType = this.game.inputType === "touch" ? "finger" : "cursor";
     this.messageElement.innerText = `${pointerType} on the circle to start`;
     this.initSpeedGraphics();
     this.initGameGraphics();
@@ -428,9 +429,7 @@ class Go extends State {
     this.snekPelletCollision();
     this.snekSnekCollision();
     if (process.env.NODE_ENV === "development") {
-      this.messageElement.innerText = String(
-        this.game.snek.speed.toPrecision(3)
-      );
+      this.messageElement.innerText = `x: ${this.game.snek.path[0].x} y: ${this.game.snek.path[0].y}`;
     }
   }
 
