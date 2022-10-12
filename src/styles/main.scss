@@ -1,19 +1,15 @@
-@import "reset";
-
-$background: #161927;
-$text: #fdfffc;
-$red: #ff3333;
-$green: #94e34f;
+@use "reset";
+@use "palette.module";
 
 body {
-  background-color: darken($background, 10%);
+  background-color: palette.$black;
 }
 
 .info {
   position: absolute;
   height: 100%;
   width: 100%;
-  background-color: transparentize($background, 0.5);
+  background-color: transparentize(lighten(palette.$black, 10%), 0.5);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -26,9 +22,9 @@ body {
 }
 
 .content {
-  background-color: $background;
+  background-color: lighten(palette.$black, 10%);
   border-radius: 20px;
-  color: $text;
+  color: palette.$white;
   padding: 20px;
   margin: 1.5rem;
 
@@ -101,15 +97,15 @@ body {
     margin-right: 0;
     width: 100%;
     max-width: 400px;
-    background-color: $background;
+    background-color: lighten(palette.$black, 10%);
     border-radius: 20px;
-    border: 5px solid $background;
+    border: 5px solid lighten(palette.$black, 10%);
   }
 }
 
 .score {
-  color: $text;
-  background-color: $background;
+  color: palette.$white;
+  background-color: lighten(palette.$black, 10%);
   padding: 8px 15px;
   border-radius: 20px;
   margin-right: 10px;
@@ -133,13 +129,13 @@ body {
 
 .game {
   position: relative;
-  background-color: lighten($background, 10%);
+  background-color: lighten(palette.$black, 20%);
   border-radius: 20px;
   margin-top: 10px;
 
   &__message {
     font-family: sans-serif;
-    color: $text;
+    color: palette.$white;
     font-size: 2rem;
     pointer-events: none;
     position: absolute;
