@@ -17,15 +17,18 @@ This project was used to teach myself about:
 
 ## The rules of the game
 
-- Control the snek with your mouse or finger
-- Eating pellets will increase:
-  - your score
-  - the length of your snek
-  - the minimum speed limit
-- Game over if you:
-  - Hit yourself
-  - Hit the wall
-  - Go under the minimum speed limit
+🎮 Control the snek with your mouse or finger
+
+👍 Eat the pellets! They'll increase:
+
+- your score
+- the length of your snek
+- the minimum speed limit
+
+❌ Be careful! Game over if you:
+
+- go below the minimum speed limit
+- hit yourself or the wall
 
 ## Todo
 
