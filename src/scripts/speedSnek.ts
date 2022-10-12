@@ -1,7 +1,5 @@
 import { Arc, dist, intersection } from "./geometry";
-import { Pellet, Snek } from "./model";
 import {
-  blue,
   Canvas,
   CanvasCircle,
   CanvasDisc,
@@ -9,9 +7,9 @@ import {
   Composite,
   SpeedGraphics,
   gameSize,
-  green,
-  red,
 } from "./graphics";
+import { Pellet, Snek } from "./model";
+import styles from "../styles/palette.module.scss";
 
 /**
  * The main game object. Responsible for game metadata
@@ -54,7 +52,6 @@ export class SpeedSnek {
       document.getElementById("score")?.clientHeight ?? 60
     );
     this.scale = Math.min(this.gameCanvas.width, this.gameCanvas.height) / 600;
-    console.log(this.scale);
     this.inputType = "";
   }
 
@@ -278,7 +275,7 @@ class Ready extends State {
       const cursorLine = new CanvasLine(
         snek.path,
         this.game.gameCanvas,
-        red,
+        styles.red,
         1
       );
       gameGraphics.add(cursorLine);
@@ -286,7 +283,7 @@ class Ready extends State {
     const snekLine = new CanvasLine(
       snek.segmentPath,
       this.game.gameCanvas,
-      green,
+      styles.green,
       snek.snekWidth
     );
     gameGraphics.add(snekLine);
@@ -302,7 +299,7 @@ class Ready extends State {
     this.readyAreaGraphics = new CanvasCircle(
       this.readyArea,
       this.game.gameCanvas,
-      red,
+      styles.red,
       5
     );
     this.graphics.add(this.readyAreaGraphics);
@@ -421,7 +418,7 @@ class Go extends State {
       new CanvasDisc(
         { center: this.game.pellet.loc!, radius: this.game.pellet.radius },
         this.game.gameCanvas,
-        blue
+        styles.blue
       )
     );
   }

@@ -1,12 +1,6 @@
 import { Arc, Path, Point } from "./geometry";
 import { SpeedSnek } from "./speedSnek";
-
-// TODO: Can I share these variables with SASS?
-export const white = "#fdfffc";
-export const red = "#ff3333";
-export const green = "#94e34f";
-export const blue = "#49b9e6";
-export const background = "#040406";
+import styles from "../styles/palette.module.scss";
 
 /**
  * Calculate the game canvas size and orientation, based on available space.
@@ -307,7 +301,7 @@ export class SpeedGraphics extends GraphicsComponent<SpeedSnek> {
     const speedPercent = this.data.snek.speed / this.data.maxSpeed;
 
     const ctx = this.canvas.context;
-    let color: typeof red | typeof white | typeof background;
+    let color: string;
 
     for (let i = 0; i <= this.barCount; i++) {
       const colorBoundary =
@@ -315,11 +309,11 @@ export class SpeedGraphics extends GraphicsComponent<SpeedSnek> {
         (this.canvas.width - this.border * 2);
 
       if (colorBoundary < speedLimitPercent) {
-        color = red;
+        color = styles.red;
       } else if (colorBoundary < speedPercent) {
-        color = white;
+        color = styles.white;
       } else {
-        color = background;
+        color = styles.black;
       }
 
       ctx.strokeStyle = color;
