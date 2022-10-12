@@ -1,4 +1,4 @@
-# Speed Snek: A game of Snake, _on speed_!
+# 🐍 Speed Snek: A game of Snake, _on speed_!
 
 [**It can be played in it's current form here!**](https://thekakkun.github.io/speed-snek/)
 
