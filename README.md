@@ -1,4 +1,4 @@
-# 🐍 Speed Snek: A game of Snake, _on speed_!
+# 🐍 Speed Snek: The game of Snake, _on speed_!
 
 [**Speed Snek can be played here!**](https://thekakkun.github.io/speed-snek/)
 
@@ -10,8 +10,8 @@ A mash-up of [the classic computer game _Snake_](<https://en.wikipedia.org/wiki/
 
 This project was used to teach myself about:
 
-- Object oriented programming
 - [TypeScript](https://www.typescriptlang.org/)
+- Object oriented programming
 - HTML canvas
 - [Parcel](https://parceljs.org/)
 
@@ -25,10 +25,10 @@ This project was used to teach myself about:
 - the length of your snek
 - the minimum speed limit
 
-❌ Be careful! Game over if you:
+❌ Be careful! It's game over if you:
 
 - go below the minimum speed limit
-- hit yourself or the wall
+- collide into yourself or the wall
 
 ## Todo
 
