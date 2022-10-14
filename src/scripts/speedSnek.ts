@@ -8,7 +8,7 @@ import {
   SpeedGraphics,
   gameSize,
 } from "./graphics";
-import { Pellet, Snek } from "./model";
+import { Pellet, Pointer, Snek } from "./model";
 import styles from "../styles/palette.module.scss";
 
 /**
@@ -190,6 +190,7 @@ class Title extends State {
   /** Construct a Title State. */
   constructor() {
     super();
+    this.startClickListener = this.startClickListener.bind(this);
   }
 
   /** On entering Title state, show instructions and
@@ -206,23 +207,33 @@ class Title extends State {
       "startButton"
     ) as HTMLButtonElement;
 
-    startButton.addEventListener("pointerdown", (e) => {
-      this.game.inputType = e.pointerType;
+    startButton.addEventListener("pointerdown", this.startClickListener);
+  }
 
-      startButton.addEventListener(
-        "pointerup",
-        () => {
-          this.game.transitionTo(new Ready());
-        },
-        { once: true }
-      );
-    });
+  startClickListener(e: PointerEvent) {
+    this.game.inputType = e.pointerType;
+    const startButton = document.getElementById(
+      "startButton"
+    ) as HTMLButtonElement;
+
+    startButton.addEventListener(
+      "pointerup",
+      () => {
+        this.game.transitionTo(new Ready());
+      },
+      { once: true }
+    );
   }
 
   /** Hide instruction elements on transition away from Title. */
   public exit(): void {
     const info = document.getElementById("info") as HTMLElement;
     info.style.display = "none";
+    const startButton = document.getElementById(
+      "startButton"
+    ) as HTMLButtonElement;
+
+    startButton.removeEventListener("pointerdown", this.startClickListener);
   }
 }
 
@@ -286,7 +297,7 @@ class Ready extends State {
       styles.green,
       snek.snekWidth
     );
-    gameGraphics.add(snekLine);
+    // gameGraphics.add(snekLine);
     this.graphics.add(gameGraphics);
 
     this.readyArea = {
