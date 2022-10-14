@@ -8,7 +8,7 @@ import {
   SpeedGraphics,
   gameSize,
 } from "./graphics";
-import { Pellet, Pointer, Snek } from "./model";
+import { Pellet, Snek } from "./model";
 import styles from "../styles/palette.module.scss";
 
 /**
@@ -18,9 +18,12 @@ import styles from "../styles/palette.module.scss";
  */
 export class SpeedSnek {
   private state: State;
+  public reqId: number;
+  public updateTime: DOMHighResTimeStamp;
 
   public score: number;
   public bestScore: number;
+  public speed: number;
   public speedLimit: number;
   public speedIncrement: number;
   public maxSpeed: number;
@@ -28,7 +31,6 @@ export class SpeedSnek {
   public speedCanvas: Canvas;
   public gameCanvas: Canvas;
   public scale: number;
-  public reqId: number;
   public inputType: string;
 
   /** The Snek object. */
@@ -80,6 +82,7 @@ export class SpeedSnek {
     this.score = 0;
     const bestScore = localStorage.getItem("bestScore");
     this.bestScore = bestScore ? Number(bestScore) : 0;
+    this.speed = 0;
     this.speedLimit = 0;
     this.speedIncrement = 0.05 * this.scale;
     this.maxSpeed = 5 * this.scale;
@@ -108,8 +111,8 @@ export class SpeedSnek {
 
   /** The main game loop. update() checks for logic,
    * render() draws canvas graphics. */
-  public gameLoop() {
-    this.update();
+  public gameLoop(timeStamp: DOMHighResTimeStamp) {
+    this.update(timeStamp);
     this.render();
     this.reqId = requestAnimationFrame(this.gameLoop);
   }
@@ -130,8 +133,26 @@ export class SpeedSnek {
   }
 
   /** Dispatches the update method to state. */
-  public update(): void {
+  public update(timeStamp: DOMHighResTimeStamp): void {
+    this.calcSpeed(timeStamp);
     this.state.update();
+    this.updateTime = timeStamp;
+  }
+
+  /** Calculate a smoothed speed, based on the raw value.
+   * Smoothing is done via exponential smoothing.
+   */
+  public calcSpeed(timeStamp: DOMHighResTimeStamp): void {
+    /**
+     * The time constant.
+     * The time it takes a unit step function to reach
+     * 63.2^ of the original signal.
+     * */
+    const tau = 0.5;
+    const tDelta = (timeStamp - this.updateTime) / 1000;
+    const alpha = 1 - Math.exp(-tDelta / tau);
+
+    this.speed = alpha * this.snek.speed + (1 - alpha) * this.speed;
   }
 
   /**
@@ -267,7 +288,10 @@ class Ready extends State {
       gameElement.releasePointerCapture(e.pointerId);
     });
     gameElement.addEventListener("pointermove", this.checkPlayerReady);
-    this.game.reqId = requestAnimationFrame(this.game.gameLoop);
+    this.game.reqId = requestAnimationFrame((timeStamp) => {
+      this.game.updateTime = timeStamp;
+      this.game.gameLoop(timeStamp);
+    });
   }
 
   /** Initialize the speedometer graphics Composite. */
@@ -365,7 +389,7 @@ class Set extends State {
   public enter(): void {
     const gameElement = this.game.gameCanvas.element;
     gameElement.addEventListener("pointermove", this.game.snek.moveHandler);
-    addEventListener("render", this.game.snek.renderHandler);
+    // addEventListener("render", this.game.snek.renderHandler);
     gameElement.addEventListener("pointerleave", this.notReady, {
       once: true,
     });
@@ -385,7 +409,7 @@ class Set extends State {
 
   /** Go back to Ready state. */
   notReady() {
-    removeEventListener("render", this.game.snek.renderHandler);
+    // removeEventListener("render", this.game.snek.renderHandler);
     this.game.transitionTo(new Ready());
   }
 
@@ -437,7 +461,7 @@ class Go extends State {
   /** Check for scoring and game over. */
   update() {
     this.speedCheck();
-    this.snekPelletCollision();
+    // this.snekPelletCollision();
     this.snekSnekCollision();
     if (process.env.NODE_ENV === "development") {
       // this.messageElement.innerText = `x: ${this.game.snek.path[0].x} y: ${this.game.snek.path[0].y}`;
@@ -494,7 +518,7 @@ class Go extends State {
     const gameElement = this.game.gameCanvas.element;
     gameElement.removeEventListener("pointerleave", this.snekLeave);
     gameElement.removeEventListener("pointermove", this.game.snek.moveHandler);
-    removeEventListener("render", this.game.snek.renderHandler);
+    // removeEventListener("render", this.game.snek.renderHandler);
   }
 }
 

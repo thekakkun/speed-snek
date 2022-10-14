@@ -18,8 +18,7 @@ export class Pointer {
   canvas: Canvas;
   path: Path;
   timeStamp: DOMHighResTimeStamp[];
-  rawSpeed: number;
-  moveSinceLastRender: number;
+  speed: number;
 
   /**
    * Constructs a Pointer.
@@ -29,8 +28,7 @@ export class Pointer {
     this.canvas = canvas;
     this.path = [];
     this.timeStamp = [];
-    this.rawSpeed = 0;
-    this.moveSinceLastRender = 0;
+    this.speed = 0;
     this.moveHandler = this.moveHandler.bind(this);
   }
 
@@ -40,7 +38,6 @@ export class Pointer {
    * and Event if triggered by 'render'.
    */
   public moveHandler(e: PointerEvent) {
-    this.moveSinceLastRender++;
     const point = {
       x: e.offsetX,
       y: e.offsetY,
@@ -66,13 +63,12 @@ export class Pointer {
    */
   public setSpeed() {
     if (this.path.length < 2) {
-      this.rawSpeed = 0;
-    } else if (this.moveSinceLastRender === 0) {
-      this.rawSpeed = 0;
+      this.speed = 0;
     } else {
-      this.rawSpeed =
-        dist(this.path[0], this.path[1]) /
-        (this.timeStamp[0] - this.timeStamp[1]);
+      const tDelta = this.timeStamp[0] - this.timeStamp[1];
+      if (tDelta) {
+        this.speed = dist(this.path[0], this.path[1]) / tDelta;
+      }
     }
   }
 }
@@ -86,7 +82,6 @@ export class Snek extends Pointer {
   segLength: number;
   segmentPath: Path;
   snekWidth: number;
-  speed: number;
 
   /**
    * Constructs a Snek.
@@ -99,7 +94,6 @@ export class Snek extends Pointer {
     this.segments = 4;
     this.segLength = 50 * scale;
     this.snekWidth = 10 * scale;
-    this.speed = 0;
     this.segmentPath = [
       {
         x: this.canvas.width / 2,
@@ -116,7 +110,6 @@ export class Snek extends Pointer {
       this.path.push(nextSeg);
       this.timeStamp.unshift(i);
     }
-    this.renderHandler = this.renderHandler.bind(this);
   }
 
   /**
@@ -127,15 +120,6 @@ export class Snek extends Pointer {
   public moveHandler(e: PointerEvent) {
     super.moveHandler(e);
     this.calculateSegments();
-    this.setSpeed();
-  }
-
-  /**
-   * Handles incoming render events, used to see if the player has stopped moving.
-   */
-  public renderHandler() {
-    this.setSpeed();
-    this.moveSinceLastRender = 0;
   }
 
   /** Calculate the position of the segments, based on path. */
@@ -164,24 +148,6 @@ export class Snek extends Pointer {
         }
       }
     }
-  }
-
-  /** Calculate a smoothed speed, based on the raw value.
-   * Smoothing is done via exponential smoothing.
-   */
-  public setSpeed() {
-    super.setSpeed();
-
-    /**
-     * The time constant.
-     * The time it takes a unit step function to reach
-     * 63.2^ of the original signal.
-     * */
-    const tau = 0.5;
-    const tDelta = (this.timeStamp[0] - this.timeStamp[1]) / 1000;
-    const alpha = 1 - Math.exp(-tDelta / tau);
-
-    this.speed = alpha * this.rawSpeed + (1 - alpha) * this.speed;
   }
 
   public grow() {

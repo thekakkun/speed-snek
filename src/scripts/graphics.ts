@@ -298,7 +298,7 @@ export class SpeedGraphics extends GraphicsComponent<SpeedSnek> {
   /** Draw the speedometer */
   render() {
     const speedLimitPercent = this.data.speedLimit / this.data.maxSpeed;
-    const speedPercent = this.data.snek.speed / this.data.maxSpeed;
+    const speedPercent = this.data.speed / this.data.maxSpeed;
 
     const ctx = this.canvas.context;
     let color: string;
