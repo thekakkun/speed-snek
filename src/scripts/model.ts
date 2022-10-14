@@ -114,7 +114,7 @@ export class Snek extends Pointer {
 
       this.segmentPath.push(nextSeg);
       this.path.push(nextSeg);
-      this.timeStamp.push(0);
+      this.timeStamp.unshift(i);
     }
     this.renderHandler = this.renderHandler.bind(this);
   }
@@ -151,11 +151,8 @@ export class Snek extends Pointer {
             center: segHead,
             radius: this.segLength,
           };
-          segHead = intersection(seg, arc);
 
-          if (segHead === null) {
-            debugger;
-          }
+          segHead = intersection(seg, arc) ?? p;
 
           this.segmentPath.push(segHead);
           if (this.segments < this.segmentPath.length) {
