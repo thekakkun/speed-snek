@@ -354,7 +354,7 @@ class Set extends State {
   public enter(): void {
     const gameElement = this.game.gameCanvas.element;
     gameElement.addEventListener("pointermove", this.game.snek.moveHandler);
-    addEventListener("render", this.game.snek.moveHandler);
+    addEventListener("render", this.game.snek.renderHandler);
     gameElement.addEventListener("pointerleave", this.notReady, {
       once: true,
     });
@@ -374,7 +374,7 @@ class Set extends State {
 
   /** Go back to Ready state. */
   notReady() {
-    removeEventListener("render", this.game.snek.moveHandler);
+    removeEventListener("render", this.game.snek.renderHandler);
     this.game.transitionTo(new Ready());
   }
 
@@ -484,7 +484,7 @@ class Go extends State {
     const gameElement = this.game.gameCanvas.element;
     gameElement.removeEventListener("pointerleave", this.snekLeave);
     gameElement.removeEventListener("pointermove", this.game.snek.moveHandler);
-    removeEventListener("render", this.game.snek.moveHandler);
+    removeEventListener("render", this.game.snek.renderHandler);
   }
 }
 

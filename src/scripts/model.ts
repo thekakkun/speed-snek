@@ -19,7 +19,7 @@ export class Pointer {
   path: Path;
   timeStamp: DOMHighResTimeStamp[];
   rawSpeed: number;
-  lastEvent: string;
+  eventHistory: [string, string];
 
   /**
    * Constructs a Pointer.
@@ -30,32 +30,24 @@ export class Pointer {
     this.path = [];
     this.timeStamp = [];
     this.rawSpeed = 0;
-    this.lastEvent = "";
+    this.eventHistory = ["", ""];
     this.moveHandler = this.moveHandler.bind(this);
   }
 
   /**
    * Handles incoming events and adds the data to Pointer.
-   * 'render' event is used to see if user has stopped moving,
-   * and will only update the path and timestamp data if
-   * no pointermove events coming.
    * @param e The event, PointerEvent if triggered by 'pointermove'
    * and Event if triggered by 'render'.
    */
-  public moveHandler(e: PointerEvent | Event) {
-    if (e instanceof PointerEvent) {
-      const point = {
-        x: e.offsetX,
-        y: e.offsetY,
-      };
+  public moveHandler(e: PointerEvent) {
+    this.eventHistory = [e.type, this.eventHistory[0]];
+    const point = {
+      x: e.offsetX,
+      y: e.offsetY,
+    };
 
-      this.path.unshift(point);
-    } else if (this.lastEvent === e.type && this.path.length) {
-      this.path.unshift(this.path[0]);
-    }
-
+    this.path.unshift(point);
     this.timeStamp.unshift(e.timeStamp);
-    this.lastEvent = e.type;
     this.setSpeed();
   }
 
@@ -70,24 +62,17 @@ export class Pointer {
   }
 
   /**
-   * Calculates the speed based off of path and timeStamp,
-   * Set window value to use a moving average.
-   * @param window The number of data points to average over.
+   * Calculates and sets the speed based off of path and timeStamp,
    */
-  public setSpeed(window = 1) {
-    window = Math.min(window, this.path.length - 1);
-
-    let travelled = 0;
-    let time = 0;
-    for (let i = 0; i < window; i++) {
-      travelled += dist(this.path[i], this.path[i + 1]);
-      time += this.timeStamp[i] - this.timeStamp[i + 1];
-    }
-
-    if (travelled === 0 || time === 0) {
+  public setSpeed() {
+    if (this.path.length < 2) {
+      this.rawSpeed = 0;
+    } else if (this.eventHistory.every((value) => value === "render")) {
       this.rawSpeed = 0;
     } else {
-      this.rawSpeed = travelled / time;
+      this.rawSpeed =
+        dist(this.path[0], this.path[1]) /
+        (this.timeStamp[0] - this.timeStamp[1]);
     }
   }
 }
@@ -131,6 +116,7 @@ export class Snek extends Pointer {
       this.path.push(nextSeg);
       this.timeStamp.push(0);
     }
+    this.renderHandler = this.renderHandler.bind(this);
   }
 
   /**
@@ -138,9 +124,18 @@ export class Snek extends Pointer {
    * @param e The event, PointerEvent if triggered by 'pointermove'
    * and Event if triggered by 'render'.
    */
-  public moveHandler(e: PointerEvent | Event) {
+  public moveHandler(e: PointerEvent) {
     super.moveHandler(e);
     this.calculateSegments();
+    this.setSpeed();
+  }
+
+  /**
+   * Handles incoming render events, used to see if the player has stopped moving.
+   * @param e Event triggered by render.
+   */
+  public renderHandler(e: Event) {
+    this.eventHistory = [e.type, this.eventHistory[0]];
     this.setSpeed();
   }
 
@@ -156,7 +151,7 @@ export class Snek extends Pointer {
             center: segHead,
             radius: this.segLength,
           };
-          segHead = intersection(seg, arc) as Point;
+          segHead = intersection(seg, arc);
 
           this.segmentPath.push(segHead);
           if (this.segments < this.segmentPath.length) {
@@ -174,9 +169,8 @@ export class Snek extends Pointer {
   /** Calculate a smoothed speed, based on the raw value.
    * Smoothing is done via exponential smoothing.
    */
-  public setSpeed(window = 1) {
-    window = Math.min(window, this.path.length - 1);
-    super.setSpeed(window);
+  public setSpeed() {
+    super.setSpeed();
 
     /**
      * The time constant.
@@ -184,7 +178,7 @@ export class Snek extends Pointer {
      * 63.2^ of the original signal.
      * */
     const tau = 0.5;
-    const tDelta = (this.timeStamp[0] - this.timeStamp[window]) / 1000 / window;
+    const tDelta = (this.timeStamp[0] - this.timeStamp[1]) / 1000;
     const alpha = 1 - Math.exp(-tDelta / tau);
 
     this.speed = alpha * this.rawSpeed + (1 - alpha) * this.speed;
