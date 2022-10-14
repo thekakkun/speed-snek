@@ -153,6 +153,10 @@ export class Snek extends Pointer {
           };
           segHead = intersection(seg, arc);
 
+          if (segHead === null) {
+            debugger;
+          }
+
           this.segmentPath.push(segHead);
           if (this.segments < this.segmentPath.length) {
             break;

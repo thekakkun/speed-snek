@@ -130,7 +130,7 @@ export function intersection(seg1: Path, seg2: Arc | Path): Point | null {
  */
 function inRange(t: number, coyote = false, range?: [number, number]): boolean {
   const [min, max] = range ?? [0, 1];
-  const tolerance = 1;
+  const tolerance = 100;
   /** t is equal to range boundary within floating point error */
   const boundary =
     Math.abs(t - min) < tolerance * Number.EPSILON ||

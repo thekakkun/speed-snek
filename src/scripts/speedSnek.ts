@@ -443,18 +443,15 @@ class Go extends State {
 
   /** Check for snek eating pellet. */
   snekPelletCollision() {
-    if (this.game.pellet.loc) {
-      if (
-        2 <= this.game.snek.path.length &&
-        intersection([this.game.snek.path[0], this.game.snek.path[1]], {
-          center: this.game.pellet.loc,
-          radius: this.game.pellet.radius + this.game.snek.snekWidth / 2,
-        })
-      ) {
-        console.log("nom!");
-        this.game.increaseScore();
-        this.game.pellet.place(this.game.snek.segmentPath);
-      }
+    if (
+      intersection([this.game.snek.path[0], this.game.snek.path[1]], {
+        center: this.game.pellet.loc,
+        radius: this.game.pellet.radius + this.game.snek.snekWidth / 2,
+      })
+    ) {
+      console.log("nom!");
+      this.game.increaseScore();
+      this.game.pellet.place(this.game.snek.segmentPath);
     }
   }
 
