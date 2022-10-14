@@ -19,7 +19,7 @@ export class Pointer {
   path: Path;
   timeStamp: DOMHighResTimeStamp[];
   rawSpeed: number;
-  eventHistory: [string, string];
+  moveSinceLastRender: number;
 
   /**
    * Constructs a Pointer.
@@ -30,7 +30,7 @@ export class Pointer {
     this.path = [];
     this.timeStamp = [];
     this.rawSpeed = 0;
-    this.eventHistory = ["", ""];
+    this.moveSinceLastRender = 0;
     this.moveHandler = this.moveHandler.bind(this);
   }
 
@@ -40,7 +40,7 @@ export class Pointer {
    * and Event if triggered by 'render'.
    */
   public moveHandler(e: PointerEvent) {
-    this.eventHistory = [e.type, this.eventHistory[0]];
+    this.moveSinceLastRender++;
     const point = {
       x: e.offsetX,
       y: e.offsetY,
@@ -67,7 +67,7 @@ export class Pointer {
   public setSpeed() {
     if (this.path.length < 2) {
       this.rawSpeed = 0;
-    } else if (this.eventHistory.every((value) => value === "render")) {
+    } else if (this.moveSinceLastRender === 0) {
       this.rawSpeed = 0;
     } else {
       this.rawSpeed =
@@ -132,11 +132,10 @@ export class Snek extends Pointer {
 
   /**
    * Handles incoming render events, used to see if the player has stopped moving.
-   * @param e Event triggered by render.
    */
-  public renderHandler(e: Event) {
-    this.eventHistory = [e.type, this.eventHistory[0]];
+  public renderHandler() {
     this.setSpeed();
+    this.moveSinceLastRender = 0;
   }
 
   /** Calculate the position of the segments, based on path. */
