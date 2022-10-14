@@ -17,44 +17,47 @@ import styles from "../styles/palette.module.scss";
  * which change depending on the game state.
  */
 export class SpeedSnek {
-  private state: State;
+  private state!: State;
+
   public reqId: number;
   public updateTime: DOMHighResTimeStamp;
+  public pointerEventsSinceRender: number;
 
   public score: number;
   public bestScore: number;
   public speed: number;
-  public speedLimit: number;
-  public speedIncrement: number;
-  public maxSpeed: number;
+  public speedLimit!: number;
+  public speedIncrement!: number;
+  public maxSpeed!: number;
 
-  public speedCanvas: Canvas;
-  public gameCanvas: Canvas;
-  public scale: number;
+  public speedCanvas!: Canvas;
+  public gameCanvas!: Canvas;
+  public scale!: number;
   public inputType: string;
 
   /** The Snek object. */
-  public snek: Snek;
-  public pellet: Pellet;
+  public snek!: Snek;
+  public pellet!: Pellet;
 
   /**
    * Constructs a SpeedSnek.
    */
-  constructor() {
-    this.gameLoop = this.gameLoop.bind(this);
+  constructor(state: State) {
+    this.reqId = 0;
+    this.updateTime = performance.now();
+    this.pointerEventsSinceRender = 0;
 
-    // initialize canvas
-    this.gameCanvas = new Canvas("gameBoard", ...gameSize());
-    const uiElement = document.getElementById("ui") as HTMLElement;
-    this.showScore();
-    uiElement.style.width = `${this.gameCanvas.width}px`;
-    this.speedCanvas = new Canvas(
-      "speedometer",
-      undefined,
-      document.getElementById("score")?.clientHeight ?? 60
-    );
-    this.scale = Math.min(this.gameCanvas.width, this.gameCanvas.height) / 600;
+    this.initCanvas();
     this.inputType = "";
+
+    this.score = 0;
+    const bestScore = localStorage.getItem("bestScore");
+    this.bestScore = bestScore ? Number(bestScore) : 0;
+    this.showScore();
+    this.speed = 0;
+
+    this.gameLoop = this.gameLoop.bind(this);
+    this.transitionTo(state);
   }
 
   /**
@@ -76,12 +79,24 @@ export class SpeedSnek {
     this.state.enter();
   }
 
+  /** Initialize the game canvas objects */
+  private initCanvas() {
+    this.gameCanvas = new Canvas("gameBoard", ...gameSize());
+    const uiElement = document.getElementById("ui") as HTMLElement;
+
+    uiElement.style.width = `${this.gameCanvas.width}px`;
+    this.speedCanvas = new Canvas(
+      "speedometer",
+      undefined,
+      document.getElementById("score")?.clientHeight ?? 60
+    );
+    this.scale = Math.min(this.gameCanvas.width, this.gameCanvas.height) / 600;
+  }
+
   /** Start a new game */
   public newGame() {
     // initialize game state
     this.score = 0;
-    const bestScore = localStorage.getItem("bestScore");
-    this.bestScore = bestScore ? Number(bestScore) : 0;
     this.speed = 0;
     this.speedLimit = 0;
     this.speedIncrement = 0.05 * this.scale;
@@ -90,9 +105,6 @@ export class SpeedSnek {
     // initialize game objects
     this.snek = new Snek(this.gameCanvas, this.scale);
     this.pellet = new Pellet(this.gameCanvas, this.scale);
-
-    // display the title screen
-    this.transitionTo(new Title());
   }
 
   /**
@@ -175,7 +187,7 @@ export class SpeedSnek {
  * States should implement.
  */
 abstract class State {
-  public game: SpeedSnek;
+  public game!: SpeedSnek;
   public graphics: Composite;
 
   messageElement: HTMLElement;
@@ -207,7 +219,7 @@ abstract class State {
  * start button.
  * @extends State
  */
-class Title extends State {
+export class Title extends State {
   /** Construct a Title State. */
   constructor() {
     super();
@@ -217,6 +229,8 @@ class Title extends State {
   /** On entering Title state, show instructions and
    * await start button click. */
   public enter(): void {
+    this.game.newGame();
+
     const info = document.getElementById("info") as HTMLElement;
     info.style.display = "flex";
     const startMessage = document.getElementById("startMessage") as HTMLElement;
@@ -288,10 +302,7 @@ class Ready extends State {
       gameElement.releasePointerCapture(e.pointerId);
     });
     gameElement.addEventListener("pointermove", this.checkPlayerReady);
-    this.game.reqId = requestAnimationFrame((timeStamp) => {
-      this.game.updateTime = timeStamp;
-      this.game.gameLoop(timeStamp);
-    });
+    this.game.reqId = requestAnimationFrame(this.game.gameLoop);
   }
 
   /** Initialize the speedometer graphics Composite. */
