@@ -65,10 +65,18 @@ export class Pointer {
     if (this.path.length < 2) {
       this.speed = 0;
     } else {
-      const tDelta = this.timeStamp[0] - this.timeStamp[1];
-      if (tDelta) {
-        this.speed = dist(this.path[0], this.path[1]) / tDelta;
+      const frameTime = 1000 / 60;
+      let tDelta = 0;
+      let distance = 0;
+      let i = 0;
+
+      while (tDelta < frameTime) {
+        tDelta += this.timeStamp[i] - this.timeStamp[i + 1];
+        distance += dist(this.path[i], this.path[i + 1]);
+        i++;
       }
+
+      this.speed = distance / tDelta;
     }
   }
 }

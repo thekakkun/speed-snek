@@ -21,7 +21,7 @@ export class SpeedSnek {
 
   public reqId: number;
   public updateTime: DOMHighResTimeStamp;
-  public pointerEventsSinceRender: number;
+  public pointerEventsSinceUpdate: number;
 
   public score: number;
   public bestScore: number;
@@ -45,7 +45,7 @@ export class SpeedSnek {
   constructor(state: State) {
     this.reqId = 0;
     this.updateTime = performance.now();
-    this.pointerEventsSinceRender = 0;
+    this.pointerEventsSinceUpdate = 0;
 
     this.initCanvas();
     this.inputType = "";
@@ -57,6 +57,8 @@ export class SpeedSnek {
     this.speed = 0;
 
     this.gameLoop = this.gameLoop.bind(this);
+    this.moveHandler = this.moveHandler.bind(this);
+
     this.transitionTo(state);
   }
 
@@ -99,8 +101,8 @@ export class SpeedSnek {
     this.score = 0;
     this.speed = 0;
     this.speedLimit = 0;
-    this.speedIncrement = 0.05 * this.scale;
-    this.maxSpeed = 5 * this.scale;
+    this.maxSpeed = 3.6 * this.scale;
+    this.speedIncrement = 0.01;
 
     // initialize game objects
     this.snek = new Snek(this.gameCanvas, this.scale);
@@ -115,7 +117,7 @@ export class SpeedSnek {
     this.score += 1;
     this.bestScore = Math.max(this.bestScore, this.score);
     this.speedLimit = Math.min(
-      this.speedLimit + this.speedIncrement,
+      this.speedLimit + this.maxSpeed * this.speedIncrement,
       this.maxSpeed
     );
     this.snek.grow();
@@ -127,6 +129,19 @@ export class SpeedSnek {
     this.update(timeStamp);
     this.render();
     this.reqId = requestAnimationFrame(this.gameLoop);
+  }
+
+  /**
+   * Clears the canvases, then dispaches render method to state
+   * to render a new frame.
+   *
+   * Also responsible for showing game score and triggering the render event.
+   */
+  public render(): void {
+    this.gameCanvas.clear();
+    this.speedCanvas.clear();
+    this.showScore();
+    this.state.graphics.render();
   }
 
   /** Shows the current and best scores. */
@@ -149,6 +164,7 @@ export class SpeedSnek {
     this.calcSpeed(timeStamp);
     this.state.update();
     this.updateTime = timeStamp;
+    this.pointerEventsSinceUpdate = 0;
   }
 
   /** Calculate a smoothed speed, based on the raw value.
@@ -160,25 +176,23 @@ export class SpeedSnek {
      * The time it takes a unit step function to reach
      * 63.2^ of the original signal.
      * */
-    const tau = 0.5;
+    const tau = 0.6;
     const tDelta = (timeStamp - this.updateTime) / 1000;
     const alpha = 1 - Math.exp(-tDelta / tau);
 
-    this.speed = alpha * this.snek.speed + (1 - alpha) * this.speed;
+    let speed;
+    if (this.pointerEventsSinceUpdate === 0) {
+      speed = 0;
+    } else {
+      speed = this.snek.speed;
+    }
+
+    this.speed = alpha * speed + (1 - alpha) * this.speed;
   }
 
-  /**
-   * Clears the canvases, then dispaches render method to state
-   * to render a new frame.
-   *
-   * Also responsible for showing game score and triggering the render event.
-   */
-  public render(): void {
-    this.gameCanvas.clear();
-    this.speedCanvas.clear();
-    this.showScore();
-    this.state.graphics.render();
-    dispatchEvent(new Event("render"));
+  /** Increment on pointermove event */
+  public moveHandler() {
+    this.pointerEventsSinceUpdate++;
   }
 }
 
@@ -399,8 +413,8 @@ class Set extends State {
    */
   public enter(): void {
     const gameElement = this.game.gameCanvas.element;
+    gameElement.addEventListener("pointermove", this.game.moveHandler);
     gameElement.addEventListener("pointermove", this.game.snek.moveHandler);
-    // addEventListener("render", this.game.snek.renderHandler);
     gameElement.addEventListener("pointerleave", this.notReady, {
       once: true,
     });
@@ -420,7 +434,6 @@ class Set extends State {
 
   /** Go back to Ready state. */
   notReady() {
-    // removeEventListener("render", this.game.snek.renderHandler);
     this.game.transitionTo(new Ready());
   }
 
@@ -472,16 +485,16 @@ class Go extends State {
   /** Check for scoring and game over. */
   update() {
     this.speedCheck();
-    // this.snekPelletCollision();
+    this.snekPelletCollision();
     this.snekSnekCollision();
     if (process.env.NODE_ENV === "development") {
-      // this.messageElement.innerText = `x: ${this.game.snek.path[0].x} y: ${this.game.snek.path[0].y}`;
+      // this.messageElement.innerText = `${this.game.speed.toPrecision(3)}`;
     }
   }
 
   /** Transition to GameOver if under speed limit. */
   speedCheck() {
-    if (this.game.snek.speed < this.game.speedLimit) {
+    if (this.game.speed < this.game.speedLimit) {
       console.log("faster!");
       this.game.transitionTo(new GameOver("You were too slow!"));
     }
@@ -489,7 +502,7 @@ class Go extends State {
 
   /** Check for snek eating pellet. */
   snekPelletCollision() {
-    for (let i = 0; i < this.game.snek.moveSinceLastRender; i++) {
+    for (let i = 0; i < this.game.pointerEventsSinceUpdate; i++) {
       if (
         intersection([this.game.snek.path[i], this.game.snek.path[i + 1]], {
           center: this.game.pellet.loc,
@@ -528,8 +541,8 @@ class Go extends State {
   public exit(): void {
     const gameElement = this.game.gameCanvas.element;
     gameElement.removeEventListener("pointerleave", this.snekLeave);
+    gameElement.removeEventListener("pointermove", this.game.moveHandler);
     gameElement.removeEventListener("pointermove", this.game.snek.moveHandler);
-    // removeEventListener("render", this.game.snek.renderHandler);
   }
 }
 
@@ -582,7 +595,7 @@ class GameOver extends State {
     restartButton.addEventListener(
       "click",
       () => {
-        this.game.newGame();
+        this.game.transitionTo(new Title());
       },
       { once: true }
     );
