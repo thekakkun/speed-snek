@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Build & Deploy
 
 on:
   push:
@@ -21,13 +21,40 @@ jobs:
       - name: Install & build packages
         run: |
           npm ci
-          npx parcel build --public-url /${{ github.event.repository.name }}
+          npx parcel build --public-url ./
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: "dist/"
+          retention-days: 1
+
+  deploy-to-gh-pages:
+    needs: build
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        id: download
+        uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: "gh-pages/"
 
       - name: Archive artifact
         run: |
           tar \
             --dereference --hard-dereference \
-            --directory "dist/" \
+            --directory ${{steps.download.outputs.download-path}} \
             -cvf "$RUNNER_TEMP/artifact.tar" \
             --exclude=.git \
             --exclude=.github \
@@ -42,19 +69,6 @@ jobs:
           path: ${{ runner.temp }}/artifact.tar
           retention-days: 1
 
-  deploy:
-    needs: build
-
-    permissions:
-      pages: write
-      id-token: write
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    runs-on: ubuntu-latest
-    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v1
