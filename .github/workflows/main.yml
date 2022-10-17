@@ -23,8 +23,15 @@ jobs:
           npm ci
           npx parcel build --public-url ./
 
-  deploy-gh-pages:
-    needs: [build]
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: "dist/"
+          retention-days: 1
+
+  deploy-to-gh-pages:
+    needs: build
 
     permissions:
       pages: write
@@ -36,11 +43,18 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
+      - name: Download artifact
+        id: download
+        uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: "gh-pages/"
+
       - name: Archive artifact
         run: |
           tar \
             --dereference --hard-dereference \
-            --directory "dist/" \
+            --directory ${{steps.download.outputs.download-path}} \
             -cvf "$RUNNER_TEMP/artifact.tar" \
             --exclude=.git \
             --exclude=.github \
