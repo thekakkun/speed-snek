@@ -92,4 +92,6 @@ jobs:
           path: "itch/"
 
       - name: Deploy to itch.io
+        env:
+          BUTLER_API_KEY: ${{secrets.BUTLER_API_KEY}}
         run: ./butler push ${{steps.download.outputs.download-path}} kakkun/speed-snek:html5
