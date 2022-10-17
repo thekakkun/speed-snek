@@ -74,7 +74,10 @@ export class SpeedSnek {
   /** Start a new game */
   public newGame() {
     // initialize game state
-    this.stats = new GameStats(this.browserEnv.scale);
+    this.stats = new GameStats(
+      this.browserEnv.scale,
+      this.browserEnv.storageAvailable
+    );
 
     // initialize game objects
     this.snek = new Snek(this.browserEnv.gameCanvas, this.browserEnv.scale);
