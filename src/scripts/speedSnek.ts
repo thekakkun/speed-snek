@@ -24,11 +24,7 @@ export class SpeedSnek {
   public updateTime: DOMHighResTimeStamp;
   public pointerEventsSinceUpdate: number;
 
-  public speedCanvas!: Canvas;
-  public gameCanvas!: Canvas;
-  public scale!: number;
-  public inputType: string;
-  public saveAvailable: boolean;
+  public browserEnv: BrowserEnv;
 
   public score: number;
   public bestScore: number;
@@ -49,8 +45,9 @@ export class SpeedSnek {
     this.updateTime = performance.now();
     this.pointerEventsSinceUpdate = 0;
 
-    this.saveAvailable = !storageAvailable("sessionStorage");
-    if (this.saveAvailable) {
+    this.browserEnv = new BrowserEnv();
+
+    if (this.browserEnv.storageAvailable) {
       const bestScore = localStorage.getItem("bestScore");
       this.bestScore = bestScore ? Number(bestScore) : 0;
     } else {
@@ -68,8 +65,6 @@ export class SpeedSnek {
         }`
       );
     }
-    this.initCanvas();
-    this.inputType = "";
 
     this.score = 0;
 
@@ -101,32 +96,18 @@ export class SpeedSnek {
     this.state.enter();
   }
 
-  /** Initialize the game canvas objects */
-  private initCanvas() {
-    this.gameCanvas = new Canvas("gameBoard", ...gameSize());
-    const uiElement = document.getElementById("ui") as HTMLElement;
-
-    uiElement.style.width = `${this.gameCanvas.width}px`;
-    this.speedCanvas = new Canvas(
-      "speedometer",
-      undefined,
-      document.getElementById("score")?.clientHeight ?? 60
-    );
-    this.scale = Math.min(this.gameCanvas.width, this.gameCanvas.height) / 600;
-  }
-
   /** Start a new game */
   public newGame() {
     // initialize game state
     this.score = 0;
     this.speed = 0;
     this.speedLimit = 0;
-    this.maxSpeed = 3.6 * this.scale;
+    this.maxSpeed = 3.6 * this.browserEnv.scale;
     this.speedIncrement = 0.01;
 
     // initialize game objects
-    this.snek = new Snek(this.gameCanvas, this.scale);
-    this.pellet = new Pellet(this.gameCanvas, this.scale);
+    this.snek = new Snek(this.browserEnv.gameCanvas, this.browserEnv.scale);
+    this.pellet = new Pellet(this.browserEnv.gameCanvas, this.browserEnv.scale);
   }
 
   /**
@@ -158,8 +139,8 @@ export class SpeedSnek {
    * Also responsible for showing game score and triggering the render event.
    */
   public render(): void {
-    this.gameCanvas.clear();
-    this.speedCanvas.clear();
+    this.browserEnv.gameCanvas.clear();
+    this.browserEnv.speedCanvas.clear();
     this.showScore();
     this.state.graphics.render();
   }
@@ -172,7 +153,7 @@ export class SpeedSnek {
       "\xa0" // A non-breaking space, since multiple spaces are ignored in HTML
     )}`;
 
-    if (this.saveAvailable) {
+    if (this.browserEnv.storageAvailable) {
       const bestElement = document.getElementById("bestScore") as HTMLElement;
       bestElement.innerHTML = `Best: ${String(this.bestScore ?? 0).padStart(
         2,
@@ -217,6 +198,36 @@ export class SpeedSnek {
     this.pointerEventsSinceUpdate++;
   }
 }
+
+/**
+ * Stores info about the browser and environment the game is running in.
+ */
+class BrowserEnv {
+  public speedCanvas: Canvas;
+  public gameCanvas: Canvas;
+  public scale: number;
+  public inputType: string;
+  public storageAvailable: boolean;
+
+  /** Construct  a BrowserEnv. */
+  constructor() {
+    this.gameCanvas = new Canvas("gameBoard", ...gameSize());
+    const uiElement = document.getElementById("ui") as HTMLElement;
+
+    uiElement.style.width = `${this.gameCanvas.width}px`;
+    this.speedCanvas = new Canvas(
+      "speedometer",
+      undefined,
+      document.getElementById("score")?.clientHeight ?? 60
+    );
+    this.scale = Math.min(this.gameCanvas.width, this.gameCanvas.height) / 600;
+
+    this.inputType = "";
+    this.storageAvailable = storageAvailable("sessionStorage");
+  }
+}
+
+class gameStats {}
 
 /**
  * The abstract State class, declares properties and methods all
@@ -282,7 +293,7 @@ export class Title extends State {
   }
 
   startClickListener(e: PointerEvent) {
-    this.game.inputType = e.pointerType;
+    this.game.browserEnv.inputType = e.pointerType;
     const startButton = document.getElementById(
       "startButton"
     ) as HTMLButtonElement;
@@ -328,12 +339,13 @@ class Ready extends State {
    * and await user input.
    */
   public enter(): void {
-    const pointerType = this.game.inputType === "touch" ? "finger" : "cursor";
+    const pointerType =
+      this.game.browserEnv.inputType === "touch" ? "finger" : "cursor";
     this.messageElement.innerText = `${pointerType} on the circle to start`;
     this.initSpeedGraphics();
     this.initGameGraphics();
 
-    const gameElement = this.game.gameCanvas.element;
+    const gameElement = this.game.browserEnv.gameCanvas.element;
     gameElement.addEventListener("pointerdown", (e) => {
       gameElement.releasePointerCapture(e.pointerId);
     });
@@ -343,7 +355,10 @@ class Ready extends State {
 
   /** Initialize the speedometer graphics Composite. */
   initSpeedGraphics() {
-    const speedGraphics = new SpeedGraphics(this.game, this.game.speedCanvas);
+    const speedGraphics = new SpeedGraphics(
+      this.game,
+      this.game.browserEnv.speedCanvas
+    );
     this.graphics.add(speedGraphics);
   }
 
@@ -356,7 +371,7 @@ class Ready extends State {
       /** Raw input from cursor, only shown during dev */
       const cursorLine = new CanvasLine(
         snek.path,
-        this.game.gameCanvas,
+        this.game.browserEnv.gameCanvas,
         styles.red,
         1
       );
@@ -364,7 +379,7 @@ class Ready extends State {
     }
     const snekLine = new CanvasLine(
       snek.segmentPath,
-      this.game.gameCanvas,
+      this.game.browserEnv.gameCanvas,
       styles.green,
       snek.snekWidth
     );
@@ -373,14 +388,14 @@ class Ready extends State {
 
     this.readyArea = {
       center: {
-        x: this.game.gameCanvas.width / 2,
-        y: this.game.gameCanvas.height / 2,
+        x: this.game.browserEnv.gameCanvas.width / 2,
+        y: this.game.browserEnv.gameCanvas.height / 2,
       },
       radius: 30,
     };
     this.readyAreaGraphics = new CanvasCircle(
       this.readyArea,
-      this.game.gameCanvas,
+      this.game.browserEnv.gameCanvas,
       styles.red,
       5
     );
@@ -392,7 +407,7 @@ class Ready extends State {
    * @param e The PointerEvent from the listener.
    */
   checkPlayerReady(e: PointerEvent) {
-    const gameCanvas = this.game.gameCanvas;
+    const gameCanvas = this.game.browserEnv.gameCanvas;
     const gameWrapper = gameCanvas.element.parentElement as HTMLElement;
 
     const cursor = {
@@ -407,7 +422,7 @@ class Ready extends State {
 
   /** Remove readyArea on transition from Ready State. */
   public exit(): void {
-    this.game.gameCanvas.element.removeEventListener(
+    this.game.browserEnv.gameCanvas.element.removeEventListener(
       "pointermove",
       this.checkPlayerReady
     );
@@ -434,7 +449,7 @@ class Set extends State {
    * Check that user hasn't stopped interacting with game canvas.
    */
   public enter(): void {
-    const gameElement = this.game.gameCanvas.element;
+    const gameElement = this.game.browserEnv.gameCanvas.element;
     gameElement.addEventListener("pointermove", this.game.moveHandler);
     gameElement.addEventListener("pointermove", this.game.snek.moveHandler);
     gameElement.addEventListener("pointerleave", this.notReady, {
@@ -461,7 +476,7 @@ class Set extends State {
 
   /** On transition from state, remove triggering notReady(). */
   public exit(): void {
-    this.game.gameCanvas.element.removeEventListener(
+    this.game.browserEnv.gameCanvas.element.removeEventListener(
       "pointerleave",
       this.notReady
     );
@@ -481,7 +496,7 @@ class Go extends State {
 
   /** On transition to Go state, place the pellet in the canvas. */
   public enter(): void {
-    this.game.gameCanvas.element.addEventListener(
+    this.game.browserEnv.gameCanvas.element.addEventListener(
       "pointerleave",
       this.snekLeave
     );
@@ -498,7 +513,7 @@ class Go extends State {
     this.graphics.add(
       new CanvasDisc(
         { center: this.game.pellet.loc!, radius: this.game.pellet.radius },
-        this.game.gameCanvas,
+        this.game.browserEnv.gameCanvas,
         styles.blue
       )
     );
@@ -561,7 +576,7 @@ class Go extends State {
 
   /** Remove gameplay event listeners on transition to next State. */
   public exit(): void {
-    const gameElement = this.game.gameCanvas.element;
+    const gameElement = this.game.browserEnv.gameCanvas.element;
     gameElement.removeEventListener("pointerleave", this.snekLeave);
     gameElement.removeEventListener("pointermove", this.game.moveHandler);
     gameElement.removeEventListener("pointermove", this.game.snek.moveHandler);
@@ -589,10 +604,6 @@ class GameOver extends State {
    * with information on the last game, and a button to play again.
    */
   public enter(): void {
-    if (this.game.saveAvailable) {
-      localStorage.setItem("bestScore", String(this.game.bestScore));
-    }
-
     const reasonElement = document.getElementById("reason") as HTMLElement;
     reasonElement.innerText = this.reason;
 
@@ -600,7 +611,8 @@ class GameOver extends State {
     scoreElement.innerText = `Score: ${this.game.score}`;
 
     const bestElement = document.getElementById("best") as HTMLElement;
-    if (this.game.saveAvailable) {
+    if (this.game.browserEnv.storageAvailable) {
+      localStorage.setItem("bestScore", String(this.game.bestScore));
       bestElement.innerText =
         `Best: ${this.game.bestScore}` +
         (this.game.score === this.game.bestScore ? " (NEW BEST!)" : "");
