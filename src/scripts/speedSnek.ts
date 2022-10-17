@@ -25,13 +25,7 @@ export class SpeedSnek {
   public pointerEventsSinceUpdate: number;
 
   public browserEnv: BrowserEnv;
-
-  public score: number;
-  public bestScore: number;
-  public speed: number;
-  public speedLimit!: number;
-  public speedIncrement!: number;
-  public maxSpeed!: number;
+  public stats: GameStats;
 
   /** The Snek object. */
   public snek!: Snek;
@@ -46,30 +40,11 @@ export class SpeedSnek {
     this.pointerEventsSinceUpdate = 0;
 
     this.browserEnv = new BrowserEnv();
-
-    if (this.browserEnv.storageAvailable) {
-      const bestScore = localStorage.getItem("bestScore");
-      this.bestScore = bestScore ? Number(bestScore) : 0;
-    } else {
-      this.bestScore = 0;
-
-      const bestScore = document.getElementById("bestScore") as HTMLElement;
-      bestScore.style.display = "none";
-
-      const gitLink = "https://thekakkun.github.io/speed-snek/";
-      console.log(
-        `Web Storage unavailable, so we won't be saving your high scores.\n${
-          window.location.href !== gitLink
-            ? `You may fare better here:\n${gitLink}`
-            : ""
-        }`
-      );
-    }
-
-    this.score = 0;
-
-    this.showScore();
-    this.speed = 0;
+    this.stats = new GameStats(
+      this.browserEnv.scale,
+      this.browserEnv.storageAvailable
+    );
+    this.stats.showScore();
 
     this.gameLoop = this.gameLoop.bind(this);
     this.moveHandler = this.moveHandler.bind(this);
@@ -99,11 +74,7 @@ export class SpeedSnek {
   /** Start a new game */
   public newGame() {
     // initialize game state
-    this.score = 0;
-    this.speed = 0;
-    this.speedLimit = 0;
-    this.maxSpeed = 3.6 * this.browserEnv.scale;
-    this.speedIncrement = 0.01;
+    this.stats = new GameStats(this.browserEnv.scale);
 
     // initialize game objects
     this.snek = new Snek(this.browserEnv.gameCanvas, this.browserEnv.scale);
@@ -115,12 +86,7 @@ export class SpeedSnek {
    * Updates the score and speed limit
    */
   public increaseScore() {
-    this.score += 1;
-    this.bestScore = Math.max(this.bestScore, this.score);
-    this.speedLimit = Math.min(
-      this.speedLimit + this.maxSpeed * this.speedIncrement,
-      this.maxSpeed
-    );
+    this.stats.increaseScore();
     this.snek.grow();
   }
 
@@ -141,25 +107,8 @@ export class SpeedSnek {
   public render(): void {
     this.browserEnv.gameCanvas.clear();
     this.browserEnv.speedCanvas.clear();
-    this.showScore();
+    this.stats.showScore();
     this.state.graphics.render();
-  }
-
-  /** Shows the current and best scores. */
-  public showScore(): void {
-    const currentScore = document.getElementById("currentScore") as HTMLElement;
-    currentScore.innerHTML = `Score: ${String(this.score ?? 0).padStart(
-      2,
-      "\xa0" // A non-breaking space, since multiple spaces are ignored in HTML
-    )}`;
-
-    if (this.browserEnv.storageAvailable) {
-      const bestElement = document.getElementById("bestScore") as HTMLElement;
-      bestElement.innerHTML = `Best: ${String(this.bestScore ?? 0).padStart(
-        2,
-        "\xa0" // A non-breaking space, since multiple spaces are ignored in HTML
-      )}`;
-    }
   }
 
   /** Dispatches the update method to state. */
@@ -190,7 +139,7 @@ export class SpeedSnek {
       speed = this.snek.speed;
     }
 
-    this.speed = alpha * speed + (1 - alpha) * this.speed;
+    this.stats.speed = alpha * speed + (1 - alpha) * this.stats.speed;
   }
 
   /** Increment on pointermove event */
@@ -211,6 +160,11 @@ class BrowserEnv {
 
   /** Construct  a BrowserEnv. */
   constructor() {
+    this.storageAvailable = storageAvailable("sessionStorage");
+    if (!this.storageAvailable) {
+      this.hideBest();
+    }
+
     this.gameCanvas = new Canvas("gameBoard", ...gameSize());
     const uiElement = document.getElementById("ui") as HTMLElement;
 
@@ -220,14 +174,78 @@ class BrowserEnv {
       undefined,
       document.getElementById("score")?.clientHeight ?? 60
     );
-    this.scale = Math.min(this.gameCanvas.width, this.gameCanvas.height) / 600;
 
+    this.scale = Math.min(this.gameCanvas.width, this.gameCanvas.height) / 600;
     this.inputType = "";
-    this.storageAvailable = storageAvailable("sessionStorage");
+  }
+
+  hideBest() {
+    const bestScore = document.getElementById("bestScore") as HTMLElement;
+    bestScore.style.display = "none";
+
+    const finalBest = document.getElementById("finalBest") as HTMLElement;
+    finalBest.style.display = "none";
+
+    const gitLink = "https://thekakkun.github.io/speed-snek/";
+    console.log(
+      `Web Storage unavailable, so we won't be saving your high scores.\n${
+        window.location.origin + window.location.pathname !== gitLink
+          ? `You may fare better here:\n${gitLink}`
+          : ""
+      }`
+    );
   }
 }
 
-class gameStats {}
+/**
+ * Stores info about the state of the game.
+ */
+export class GameStats {
+  public score: number;
+  public bestScore: number;
+  public speed: number;
+  public speedLimit: number;
+  public maxSpeed: number;
+  public speedIncrement: number;
+
+  /** Construct a GameStats */
+  constructor(scale = 1, storageAvailable = false) {
+    this.score = 0;
+    if (storageAvailable) {
+      this.bestScore = Number(localStorage.getItem("bestScore") ?? 0);
+    } else {
+      this.bestScore = 0;
+    }
+
+    this.speedLimit = 0;
+    this.speed = 0;
+    this.maxSpeed = 3.6 * scale;
+    this.speedIncrement = 0.01;
+  }
+
+  /** Increase the game score and difficulty. */
+  public increaseScore() {
+    this.score += 1;
+    this.bestScore = Math.max(this.bestScore, this.score);
+    this.speedLimit = Math.min(
+      this.speedLimit + this.maxSpeed * this.speedIncrement,
+      this.maxSpeed
+    );
+  }
+
+  public showScore(): void {
+    const currentScore = document.getElementById("currentScore") as HTMLElement;
+    currentScore.innerHTML = `Score: ${String(this.score).padStart(
+      2,
+      "\xa0" // A non-breaking space, since multiple spaces are ignored in HTML
+    )}`;
+    const bestElement = document.getElementById("bestScore") as HTMLElement;
+    bestElement.innerHTML = `Best: ${String(this.bestScore ?? 0).padStart(
+      2,
+      "\xa0" // A non-breaking space, since multiple spaces are ignored in HTML
+    )}`;
+  }
+}
 
 /**
  * The abstract State class, declares properties and methods all
@@ -356,7 +374,7 @@ class Ready extends State {
   /** Initialize the speedometer graphics Composite. */
   initSpeedGraphics() {
     const speedGraphics = new SpeedGraphics(
-      this.game,
+      this.game.stats,
       this.game.browserEnv.speedCanvas
     );
     this.graphics.add(speedGraphics);
@@ -531,7 +549,7 @@ class Go extends State {
 
   /** Transition to GameOver if under speed limit. */
   speedCheck() {
-    if (this.game.speed < this.game.speedLimit) {
+    if (this.game.stats.speed < this.game.stats.speedLimit) {
       console.log("faster!");
       this.game.transitionTo(new GameOver("You were too slow!"));
     }
@@ -608,16 +626,16 @@ class GameOver extends State {
     reasonElement.innerText = this.reason;
 
     const scoreElement = document.getElementById("finalScore") as HTMLElement;
-    scoreElement.innerText = `Score: ${this.game.score}`;
+    scoreElement.innerText = `Score: ${this.game.stats.score}`;
 
-    const bestElement = document.getElementById("best") as HTMLElement;
     if (this.game.browserEnv.storageAvailable) {
-      localStorage.setItem("bestScore", String(this.game.bestScore));
-      bestElement.innerText =
-        `Best: ${this.game.bestScore}` +
-        (this.game.score === this.game.bestScore ? " (NEW BEST!)" : "");
-    } else {
-      bestElement.style.display = "none";
+      const finalBest = document.getElementById("finalBest") as HTMLElement;
+      localStorage.setItem("bestScore", String(this.game.stats.bestScore));
+      finalBest.innerText =
+        `Best: ${this.game.stats.bestScore}` +
+        (this.game.stats.score === this.game.stats.bestScore
+          ? " (NEW BEST!)"
+          : "");
     }
 
     const info = document.getElementById("info") as HTMLElement;
