@@ -1,8 +1,7 @@
-import { SpeedSnek } from "./speedSnek";
+import { SpeedSnek, Title } from "./speedSnek";
 
 addEventListener("load", () => {
-  const speedSnek = new SpeedSnek();
-  speedSnek.newGame();
+  const speedSnek = new SpeedSnek(new Title());
 
   console.log(`\
 ==================

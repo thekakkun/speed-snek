@@ -1,15 +1,6 @@
 import { dist, intersection, Path, Point } from "./geometry";
 import { Canvas } from "./graphics";
-
-/**
- * Return a random number between min and max.
- * @param min Smallest value number can take (inclusive).
- * @param max Largest value number can take (exclusive).
- * @returns A random number between min and max.
- */
-function randomBetween(min: number, max: number) {
-  return Math.random() * (max - min) + min;
-}
+import { randomBetween } from "./helper";
 
 /**
  * Holds information about the user's pointer movement.
@@ -18,8 +9,7 @@ export class Pointer {
   canvas: Canvas;
   path: Path;
   timeStamp: DOMHighResTimeStamp[];
-  rawSpeed: number;
-  lastEvent: string;
+  speed: number;
 
   /**
    * Constructs a Pointer.
@@ -29,33 +19,23 @@ export class Pointer {
     this.canvas = canvas;
     this.path = [];
     this.timeStamp = [];
-    this.rawSpeed = 0;
-    this.lastEvent = "";
+    this.speed = 0;
     this.moveHandler = this.moveHandler.bind(this);
   }
 
   /**
    * Handles incoming events and adds the data to Pointer.
-   * 'render' event is used to see if user has stopped moving,
-   * and will only update the path and timestamp data if
-   * no pointermove events coming.
    * @param e The event, PointerEvent if triggered by 'pointermove'
    * and Event if triggered by 'render'.
    */
-  public moveHandler(e: PointerEvent | Event) {
-    if (e instanceof PointerEvent) {
-      const point = {
-        x: e.offsetX,
-        y: e.offsetY,
-      };
+  public moveHandler(e: PointerEvent) {
+    const point = {
+      x: e.offsetX,
+      y: e.offsetY,
+    };
 
-      this.path.unshift(point);
-    } else if (this.lastEvent === e.type && this.path.length) {
-      this.path.unshift(this.path[0]);
-    }
-
+    this.path.unshift(point);
     this.timeStamp.unshift(e.timeStamp);
-    this.lastEvent = e.type;
     this.setSpeed();
   }
 
@@ -70,24 +50,24 @@ export class Pointer {
   }
 
   /**
-   * Calculates the speed based off of path and timeStamp,
-   * Set window value to use a moving average.
-   * @param window The number of data points to average over.
+   * Calculates and sets the speed based off of path and timeStamp,
    */
-  public setSpeed(window = 1) {
-    window = Math.min(window, this.path.length - 1);
-
-    let travelled = 0;
-    let time = 0;
-    for (let i = 0; i < window; i++) {
-      travelled += dist(this.path[i], this.path[i + 1]);
-      time += this.timeStamp[i] - this.timeStamp[i + 1];
-    }
-
-    if (travelled === 0 || time === 0) {
-      this.rawSpeed = 0;
+  public setSpeed() {
+    if (this.path.length < 2) {
+      this.speed = 0;
     } else {
-      this.rawSpeed = travelled / time;
+      const frameTime = 1000 / 60;
+      let tDelta = 0;
+      let distance = 0;
+      let i = 0;
+
+      while (tDelta < frameTime) {
+        tDelta += this.timeStamp[i] - this.timeStamp[i + 1];
+        distance += dist(this.path[i], this.path[i + 1]);
+        i++;
+      }
+
+      this.speed = distance / tDelta;
     }
   }
 }
@@ -101,7 +81,6 @@ export class Snek extends Pointer {
   segLength: number;
   segmentPath: Path;
   snekWidth: number;
-  speed: number;
 
   /**
    * Constructs a Snek.
@@ -114,7 +93,6 @@ export class Snek extends Pointer {
     this.segments = 4;
     this.segLength = 50 * scale;
     this.snekWidth = 10 * scale;
-    this.speed = 0;
     this.segmentPath = [
       {
         x: this.canvas.width / 2,
@@ -129,7 +107,7 @@ export class Snek extends Pointer {
 
       this.segmentPath.push(nextSeg);
       this.path.push(nextSeg);
-      this.timeStamp.push(0);
+      this.timeStamp.unshift(i);
     }
   }
 
@@ -138,10 +116,9 @@ export class Snek extends Pointer {
    * @param e The event, PointerEvent if triggered by 'pointermove'
    * and Event if triggered by 'render'.
    */
-  public moveHandler(e: PointerEvent | Event) {
+  public moveHandler(e: PointerEvent) {
     super.moveHandler(e);
     this.calculateSegments();
-    this.setSpeed();
   }
 
   /** Calculate the position of the segments, based on path. */
@@ -156,7 +133,8 @@ export class Snek extends Pointer {
             center: segHead,
             radius: this.segLength,
           };
-          segHead = intersection(seg, arc) as Point;
+
+          segHead = intersection(seg, arc) ?? p;
 
           this.segmentPath.push(segHead);
           if (this.segments < this.segmentPath.length) {
@@ -169,25 +147,6 @@ export class Snek extends Pointer {
         }
       }
     }
-  }
-
-  /** Calculate a smoothed speed, based on the raw value.
-   * Smoothing is done via exponential smoothing.
-   */
-  public setSpeed(window = 1) {
-    window = Math.min(window, this.path.length - 1);
-    super.setSpeed(window);
-
-    /**
-     * The time constant.
-     * The time it takes a unit step function to reach
-     * 63.2^ of the original signal.
-     * */
-    const tau = 0.5;
-    const tDelta = (this.timeStamp[0] - this.timeStamp[window]) / 1000 / window;
-    const alpha = 1 - Math.exp(-tDelta / tau);
-
-    this.speed = alpha * this.rawSpeed + (1 - alpha) * this.speed;
   }
 
   public grow() {

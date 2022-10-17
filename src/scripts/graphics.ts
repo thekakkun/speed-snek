@@ -1,5 +1,5 @@
 import { Arc, Path, Point } from "./geometry";
-import { SpeedSnek } from "./speedSnek";
+import { GameStats, SpeedSnek } from "./speedSnek";
 import styles from "../styles/palette.module.scss";
 
 /**
@@ -273,7 +273,7 @@ export class CanvasDisc extends GraphicsComponent<Arc> {
  * Used to draw the speedometer.
  * @extends GraphicsComponent
  */
-export class SpeedGraphics extends GraphicsComponent<SpeedSnek> {
+export class SpeedGraphics extends GraphicsComponent<GameStats> {
   barWidth: number;
   margin: number;
   border: number;
@@ -284,7 +284,7 @@ export class SpeedGraphics extends GraphicsComponent<SpeedSnek> {
    * @param data contains various pieces of data regarding speed.
    * @param canvas The Canvas to render to.
    */
-  constructor(data: SpeedSnek, canvas: Canvas) {
+  constructor(data: GameStats, canvas: Canvas) {
     super(data, canvas);
 
     this.barWidth = 6;
@@ -298,7 +298,7 @@ export class SpeedGraphics extends GraphicsComponent<SpeedSnek> {
   /** Draw the speedometer */
   render() {
     const speedLimitPercent = this.data.speedLimit / this.data.maxSpeed;
-    const speedPercent = this.data.snek.speed / this.data.maxSpeed;
+    const speedPercent = this.data.speed / this.data.maxSpeed;
 
     const ctx = this.canvas.context;
     let color: string;
