@@ -83,7 +83,7 @@ jobs:
           curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
           unzip butler.zip
           chmod +x butler
-      
+
       - name: Download artifact
         id: download
         uses: actions/download-artifact@v3
@@ -92,4 +92,4 @@ jobs:
           path: "itch/"
 
       - name: Deploy to itch.io
-        run: ./butler push ${{steps.download.outputs.download-path}} kakkun/speed-snek
+        run: ./butler push ${{steps.download.outputs.download-path}} kakkun/speed-snek:html5
