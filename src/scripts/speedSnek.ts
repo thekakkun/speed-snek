@@ -10,6 +10,7 @@ import {
 } from "./graphics";
 import { Pellet, Snek } from "./model";
 import styles from "../styles/palette.module.scss";
+import { storageAvailable } from "./helper";
 
 /**
  * The main game object. Responsible for game metadata
@@ -23,17 +24,18 @@ export class SpeedSnek {
   public updateTime: DOMHighResTimeStamp;
   public pointerEventsSinceUpdate: number;
 
+  public speedCanvas!: Canvas;
+  public gameCanvas!: Canvas;
+  public scale!: number;
+  public inputType: string;
+  public saveAvailable: boolean;
+
   public score: number;
   public bestScore: number;
   public speed: number;
   public speedLimit!: number;
   public speedIncrement!: number;
   public maxSpeed!: number;
-
-  public speedCanvas!: Canvas;
-  public gameCanvas!: Canvas;
-  public scale!: number;
-  public inputType: string;
 
   /** The Snek object. */
   public snek!: Snek;
@@ -47,12 +49,30 @@ export class SpeedSnek {
     this.updateTime = performance.now();
     this.pointerEventsSinceUpdate = 0;
 
+    this.saveAvailable = !storageAvailable("sessionStorage");
+    if (this.saveAvailable) {
+      const bestScore = localStorage.getItem("bestScore");
+      this.bestScore = bestScore ? Number(bestScore) : 0;
+    } else {
+      this.bestScore = 0;
+
+      const bestScore = document.getElementById("bestScore") as HTMLElement;
+      bestScore.style.display = "none";
+
+      const gitLink = "https://thekakkun.github.io/speed-snek/";
+      console.log(
+        `Web Storage unavailable, so we won't be saving your high scores.\n${
+          window.location.href !== gitLink
+            ? `You may fare better here:\n${gitLink}`
+            : ""
+        }`
+      );
+    }
     this.initCanvas();
     this.inputType = "";
 
     this.score = 0;
-    const bestScore = localStorage.getItem("bestScore");
-    this.bestScore = bestScore ? Number(bestScore) : 0;
+
     this.showScore();
     this.speed = 0;
 
@@ -152,11 +172,13 @@ export class SpeedSnek {
       "\xa0" // A non-breaking space, since multiple spaces are ignored in HTML
     )}`;
 
-    const bestScore = document.getElementById("bestScore") as HTMLElement;
-    bestScore.innerHTML = `Best: ${String(this.bestScore ?? 0).padStart(
-      2,
-      "\xa0" // A non-breaking space, since multiple spaces are ignored in HTML
-    )}`;
+    if (this.saveAvailable) {
+      const bestElement = document.getElementById("bestScore") as HTMLElement;
+      bestElement.innerHTML = `Best: ${String(this.bestScore ?? 0).padStart(
+        2,
+        "\xa0" // A non-breaking space, since multiple spaces are ignored in HTML
+      )}`;
+    }
   }
 
   /** Dispatches the update method to state. */
@@ -567,7 +589,9 @@ class GameOver extends State {
    * with information on the last game, and a button to play again.
    */
   public enter(): void {
-    localStorage.setItem("bestScore", String(this.game.bestScore));
+    if (this.game.saveAvailable) {
+      localStorage.setItem("bestScore", String(this.game.bestScore));
+    }
 
     const reasonElement = document.getElementById("reason") as HTMLElement;
     reasonElement.innerText = this.reason;
@@ -576,9 +600,13 @@ class GameOver extends State {
     scoreElement.innerText = `Score: ${this.game.score}`;
 
     const bestElement = document.getElementById("best") as HTMLElement;
-    bestElement.innerText =
-      `Best: ${this.game.bestScore}` +
-      (this.game.score === this.game.bestScore ? " (NEW BEST!)" : "");
+    if (this.game.saveAvailable) {
+      bestElement.innerText =
+        `Best: ${this.game.bestScore}` +
+        (this.game.score === this.game.bestScore ? " (NEW BEST!)" : "");
+    } else {
+      bestElement.style.display = "none";
+    }
 
     const info = document.getElementById("info") as HTMLElement;
     info.style.display = "flex";

@@ -1,15 +1,6 @@
 import { dist, intersection, Path, Point } from "./geometry";
 import { Canvas } from "./graphics";
-
-/**
- * Return a random number between min and max.
- * @param min Smallest value number can take (inclusive).
- * @param max Largest value number can take (exclusive).
- * @returns A random number between min and max.
- */
-function randomBetween(min: number, max: number) {
-  return Math.random() * (max - min) + min;
-}
+import { randomBetween } from "./helper";
 
 /**
  * Holds information about the user's pointer movement.
