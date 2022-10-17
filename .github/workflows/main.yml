@@ -72,3 +72,24 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v1
+
+  deploy-to-itch:
+    needs: build
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install butler
+        run: |
+          curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
+          unzip butler.zip
+          chmod +x butler
+      
+      - name: Download artifact
+        id: download
+        uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: "itch/"
+
+      - name: Deploy to itch.io
+        run: ./butler push ${{steps.download.outputs.download-path}} kakkun/speed-snek
