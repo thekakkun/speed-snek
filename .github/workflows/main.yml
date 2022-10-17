@@ -21,8 +21,21 @@ jobs:
       - name: Install & build packages
         run: |
           npm ci
-          npx parcel build --public-url /${{ github.event.repository.name }}
+          npx parcel build --public-url ./
 
+  deploy-gh-pages:
+    needs: [build]
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
       - name: Archive artifact
         run: |
           tar \
@@ -42,19 +55,6 @@ jobs:
           path: ${{ runner.temp }}/artifact.tar
           retention-days: 1
 
-  deploy:
-    needs: build
-
-    permissions:
-      pages: write
-      id-token: write
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    runs-on: ubuntu-latest
-    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v1
