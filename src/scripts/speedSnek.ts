@@ -222,7 +222,7 @@ export class GameStats {
 
     this.speedLimit = 0;
     this.speed = 0;
-    this.maxSpeed = 3.6 * scale;
+    this.maxSpeed = 2.4 * scale;
     this.speedIncrement = 0.01;
   }
 

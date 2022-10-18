@@ -48,6 +48,7 @@ export class Canvas {
   constructor(id: string, width?: number, height?: number) {
     this.element = document.getElementById(id) as HTMLCanvasElement;
     this.context = this.element.getContext("2d") as CanvasRenderingContext2D;
+    // debugger;
 
     this.width = width ?? this.element.clientWidth;
     this.height = height ?? this.element.clientHeight;
