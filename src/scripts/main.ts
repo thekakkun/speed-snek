@@ -1,17 +1,16 @@
 import { SpeedSnek, Title } from "./speedSnek";
 
 addEventListener("load", () => {
-  const speedSnek = new SpeedSnek(new Title());
-
-  console.log(`\
-==================
-
+  console.log(`
 🐍 says,
+
   💽 See my source code here!
       https://github.com/thekakkun/speed-snek
-  💸 Like what you see? Donate!
+
+  💸 Speed Snek is strong enough to stand on its own two feet.
+     But you can help support its creator here!
       https://ko-fi.com/kakkun
 
-==================\
   `);
+  const speedSnek = new SpeedSnek(new Title());
 });
