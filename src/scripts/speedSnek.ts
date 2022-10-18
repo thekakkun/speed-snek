@@ -129,7 +129,7 @@ export class SpeedSnek {
     /**
      * The time constant.
      * The time it takes a unit step function to reach
-     * 63.2^ of the original signal.
+     * 63.2% of the original signal.
      * */
     const tau = 0.6;
     const tDelta = (timeStamp - this.updateTime) / 1000;
@@ -238,13 +238,13 @@ export class GameStats {
 
   public showScore(): void {
     const currentScore = document.getElementById("currentScore") as HTMLElement;
-    currentScore.innerHTML = `Score: ${String(this.score).padStart(
-      2,
+    currentScore.innerHTML = `Score:${String(this.score).padStart(
+      3,
       "\xa0" // A non-breaking space, since multiple spaces are ignored in HTML
     )}`;
     const bestElement = document.getElementById("bestScore") as HTMLElement;
-    bestElement.innerHTML = `Best: ${String(this.bestScore ?? 0).padStart(
-      2,
+    bestElement.innerHTML = `Best:${String(this.bestScore ?? 0).padStart(
+      3,
       "\xa0" // A non-breaking space, since multiple spaces are ignored in HTML
     )}`;
   }

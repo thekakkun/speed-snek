@@ -1,6 +1,6 @@
 # 🐍 Speed Snek: The game of Snake, _on speed_!
 
-[**Speed Snek can be played here!**](https://thekakkun.github.io/speed-snek/)
+**Speed Snek can be played [right here on GitHub](https://thekakkun.github.io/speed-snek/) or [at itch.io](https://kakkun.itch.io/speed-snek/)!**
 
 [Read more about the development of the game here](https://thekakkun.github.io/blog?tag=speed+snek).
 
@@ -11,9 +11,9 @@ A mash-up of [the classic computer game _Snake_](<https://en.wikipedia.org/wiki/
 This project was used to teach myself about:
 
 - [TypeScript](https://www.typescriptlang.org/)
-- Object oriented programming
-- HTML canvas
+- [HTML canvas](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API)
 - [Parcel](https://parceljs.org/)
+- Object oriented programming
 
 ## The rules of the game
 
@@ -32,10 +32,10 @@ This project was used to teach myself about:
 
 ## Todo
 
-- [ ] Tweak the difficulty curve, consider adding lives maybe?
 - [ ] Maybe different kinds of food pellets? Power-ups?
 - [x] Figure out scaling on phone screens
 - [x] Create a minimal version of the game
 - [x] Implement a starting screen and game over menu
 - [x] Finish the speed & score UI
 - [x] Visual design overhaul
+- [x] Tweak the difficulty curve, consider adding lives maybe?
