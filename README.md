@@ -8,12 +8,11 @@
 
 A mash-up of [the classic computer game _Snake_](<https://en.wikipedia.org/wiki/Snake_(video_game_genre)>) and [the 1994 movie _Speed_](<https://en.wikipedia.org/wiki/Speed_(1994_film)>) starring Keanu Reeves and Sandra Bullock.
 
-This project was used to teach myself about:
+## Tech Stack
 
-- [TypeScript](https://www.typescriptlang.org/)
-- [HTML canvas](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API)
-- [Parcel](https://parceljs.org/)
-- Object oriented programming
+- [Parcel](https://parceljs.org/): Build tool
+- [TypeScript](https://www.typescriptlang.org/): No frameworks were used, just TypeScript transpiled into plain JS.
+- [HTML canvas](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API): The game is rendered within an HTML canvas.
 
 ## The rules of the game
 
